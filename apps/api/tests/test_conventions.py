@@ -13,12 +13,16 @@ from retailops_api.domain.models import Base
 
 EXPECTED_TABLES = {
     "categories",
+    "forecast_predictions",
+    "forecast_runs",
     "products",
     "sales_records",
     "stores",
     "supplier_products",
     "suppliers",
 }
+
+IMMUTABLE_FACT_TABLES = {"forecast_predictions", "forecast_runs", "sales_records"}
 
 API_ROOT = Path(__file__).resolve().parents[1]
 
@@ -60,16 +64,17 @@ def test_every_table_records_when_a_row_was_created(table_name: str) -> None:
     assert "created_at" in Base.metadata.tables[table_name].columns
 
 
-@pytest.mark.parametrize("table_name", sorted(EXPECTED_TABLES - {"sales_records"}))
+@pytest.mark.parametrize("table_name", sorted(EXPECTED_TABLES - IMMUTABLE_FACT_TABLES))
 def test_mutable_tables_track_updates_and_lifecycle(table_name: str) -> None:
     columns = Base.metadata.tables[table_name].columns
     assert "updated_at" in columns
     assert "active" in columns
 
 
-def test_sales_records_are_immutable_facts() -> None:
-    """ADR-002: a correction re-ingests the natural key instead of editing a row."""
-    columns = Base.metadata.tables["sales_records"].columns
+@pytest.mark.parametrize("table_name", sorted(IMMUTABLE_FACT_TABLES))
+def test_fact_tables_are_immutable_once_written(table_name: str) -> None:
+    """Sales facts and forecast results are not edited in place."""
+    columns = Base.metadata.tables[table_name].columns
     assert "updated_at" not in columns
     assert "active" not in columns
 

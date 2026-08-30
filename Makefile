@@ -5,12 +5,13 @@ NPM := npm --prefix $(WEB_DIR)
 
 .DEFAULT_GOAL := help
 .PHONY: help setup env dev api web db-up db-down db-logs db-shell migrate migration \
-        autogenerate db-reset seed synthetic test test-api test-web lint lint-api lint-web \
-        format format-check typecheck build docker-build stack-up stack-down clean
+        autogenerate db-reset seed synthetic forecast test test-api test-web \
+        lint lint-api lint-web format format-check typecheck build docker-build \
+        stack-up stack-down clean
 
 help: ## Show available targets
 	@grep -hE '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) \
-		| awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-14s\033[0m %s\n", $$1, $$2}'
+		| awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-16s\033[0m %s\n", $$1, $$2}'
 
 env: ## Create .env from .env.example when missing
 	@[ -f .env ] || (cp .env.example .env && echo "Created .env from .env.example")
@@ -58,6 +59,9 @@ seed: ## Load deterministic development reference data (idempotent)
 
 synthetic: ## Generate, validate and ingest the development synthetic dataset
 	cd $(API_DIR) && uv run retailops-synthetic --output "$(CURDIR)/data/synthetic"
+
+forecast: ## Walk-forward the demand baselines and write the benchmark
+	cd $(API_DIR) && uv run retailops-forecast --output "$(CURDIR)/data/forecasts"
 
 test: test-api test-web ## Run all tests
 

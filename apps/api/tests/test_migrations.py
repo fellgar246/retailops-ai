@@ -23,6 +23,8 @@ BOOTSTRAP_REVISION = "6424a6340d6e"
 
 DOMAIN_TABLES = {
     "categories",
+    "forecast_predictions",
+    "forecast_runs",
     "products",
     "sales_records",
     "stores",
@@ -133,6 +135,17 @@ def test_every_table_has_its_primary_key(migrated: URL, table_name: str) -> None
             "supplier_products",
             {"ix_supplier_products_product_id", "ix_supplier_products_supplier_id"},
         ),
+        (
+            "forecast_runs",
+            {"ix_forecast_runs_cutoff", "ix_forecast_runs_model_id"},
+        ),
+        (
+            "forecast_predictions",
+            {
+                "ix_forecast_predictions_forecast_run_id",
+                "ix_forecast_predictions_period_start",
+            },
+        ),
     ],
 )
 def test_expected_indexes_exist(migrated: URL, table_name: str, expected: set[str]) -> None:
@@ -148,6 +161,7 @@ def test_expected_indexes_exist(migrated: URL, table_name: str, expected: set[st
         ("products", {("category_id",): "categories"}),
         ("sales_records", {("store_id",): "stores", ("product_id",): "products"}),
         ("supplier_products", {("supplier_id",): "suppliers", ("product_id",): "products"}),
+        ("forecast_predictions", {("forecast_run_id",): "forecast_runs"}),
     ],
 )
 def test_foreign_keys_point_where_they_should(
@@ -168,6 +182,14 @@ def test_foreign_keys_restrict_deletes(migrated: URL, table_name: str) -> None:
         assert fk["options"].get("ondelete") == "RESTRICT", fk["name"]
 
 
+def test_forecast_predictions_are_removed_with_their_run(migrated: URL) -> None:
+    """A run owns its predictions; they have no meaning once the run is gone."""
+    foreign_keys = _inspector(migrated).get_foreign_keys("forecast_predictions")
+
+    assert len(foreign_keys) == 1
+    assert foreign_keys[0]["options"].get("ondelete") == "CASCADE"
+
+
 @pytest.mark.parametrize(
     ("table_name", "expected"),
     [
@@ -177,6 +199,10 @@ def test_foreign_keys_restrict_deletes(migrated: URL, table_name: str) -> None:
         ("suppliers", {"uq_suppliers_code"}),
         ("supplier_products", {"uq_supplier_products_supplier_id_product_id"}),
         ("sales_records", {"uq_sales_records_store_id_product_id_business_date"}),
+        (
+            "forecast_predictions",
+            {"uq_forecast_predictions_run_entity_week"},
+        ),
     ],
 )
 def test_unique_constraints_exist(migrated: URL, table_name: str, expected: set[str]) -> None:
@@ -207,6 +233,15 @@ def test_unique_constraints_exist(migrated: URL, table_name: str, expected: set[
                 "ck_sales_records_unit_price_non_negative",
                 "ck_sales_records_discount_amount_non_negative",
                 "ck_sales_records_stock_on_hand_non_negative",
+            },
+        ),
+        ("forecast_runs", {"ck_forecast_runs_horizon_positive"}),
+        (
+            "forecast_predictions",
+            {
+                "ck_forecast_predictions_step_positive",
+                "ck_forecast_predictions_predicted_non_negative",
+                "ck_forecast_predictions_actual_non_negative",
             },
         ),
     ],

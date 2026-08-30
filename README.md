@@ -4,8 +4,9 @@ Retail operations intelligence platform. This repository currently contains:
 
 - **The engineering foundation** — a FastAPI backend, a Next.js frontend, a local PostgreSQL database and the tooling needed to develop, test and containerize them.
 - **The core retail domain** — the product catalog (categories, products, suppliers, supplier terms, stores) and the daily sales-history model, with migrations, data-access helpers, development seed data and a deterministic synthetic history generator.
+- **Forecast evaluation** — a weekly category-demand frame, time-based splits, naive / seasonal-naive / moving-average baselines, walk-forward backtesting, and persisted forecast runs.
 
-Forecasting, document intelligence and AWS deployment are not implemented yet.
+The ML training pipeline, document intelligence and AWS deployment are not implemented yet.
 
 ## Prerequisites
 
@@ -47,7 +48,7 @@ retailops/
 ├── apps/
 │   ├── api/          FastAPI backend (src layout, tests, Alembic migrations)
 │   └── web/          Next.js frontend (App Router, TypeScript, Vitest)
-├── ml/               Forecasting code and notebooks (not yet implemented)
+├── ml/               ML training pipeline (not yet implemented)
 ├── infra/            Terraform modules and environments (not yet implemented)
 ├── data/             Local raw/processed/synthetic data (git-ignored)
 ├── docs/             Architecture notes and ADRs
@@ -64,6 +65,7 @@ make db-up      # start PostgreSQL and wait until healthy
 make migrate    # apply Alembic migrations
 make seed       # load development reference data (safe to re-run)
 make synthetic  # generate, validate and ingest a year of synthetic sales
+make forecast   # walk-forward the demand baselines and write the benchmark
 make dev        # run API (:8000) and web (:3000) together
 ```
 
@@ -112,6 +114,7 @@ make migration m="add products"  # create an empty revision
 make autogenerate m="add x"      # create a revision from model changes
 make seed                        # load reference data (idempotent)
 make synthetic                   # regenerate and ingest synthetic history
+make forecast                    # walk-forward baselines; writes data/forecasts/
 make db-reset                    # rebuild the schema from scratch and re-seed
 ```
 
@@ -131,6 +134,8 @@ modelling rationale in [ADR-002](docs/adr/ADR-002-core-retail-domain-model.md).
 | SupplierProduct | `supplier_products` | Cost, case pack, minimum order and lead time per supplier/product pairing |
 | Store | `stores` | Selling locations, grouped by region and type |
 | SalesRecord | `sales_records` | One row per store, product and trading day |
+| ForecastRun | `forecast_runs` | One baseline forecast at one origin (model, cutoff, horizon) |
+| ForecastPrediction | `forecast_predictions` | One predicted week per store and category, with actual when known |
 
 `make seed` loads a deterministic development catalog. It is idempotent, so
 running it repeatedly neither duplicates nor disturbs existing rows.
@@ -141,6 +146,37 @@ catalog and daily sales into the configured database. Re-running it is safe.
 The same seed and configuration always produce the same checksum. The file
 contract (columns, keys, units, date and decimal formats) is documented in
 [the synthetic dataset note](docs/architecture/synthetic-retail-dataset.md).
+
+## Forecast evaluation
+
+The first demand problem is **weekly category demand per store**: daily
+`units_sold` summed across the products in a category, for each store, on
+each complete ISO week (Monday–Sunday). Incomplete edge weeks are dropped;
+a store–category week with no sales is stored as zero. The default horizon
+is four weeks.
+
+Splits are time-based only. A later week never appears in an earlier slice.
+Evaluation is walk-forward (rolling-origin): at each cutoff the model may
+read history through that week and must forecast the next four. Three
+baselines share one prediction interface so a later model can be compared
+on the same folds:
+
+| Model | Rule |
+| --- | --- |
+| `naive` | Repeat the last observed week |
+| `seasonal_naive` | Same week a configurable lag ago (default 52); falls back to naive when that week is missing |
+| `moving_average` | Mean of the last *n* weeks (default 4), never reading past the cutoff |
+
+Metrics are MAE, RMSE, WAPE and mean forecast bias. When every actual is
+zero, WAPE is `0` if every prediction is also zero and `1` otherwise.
+
+`make forecast` rebuilds the development history in memory, walks the three
+baselines forward, and writes `data/forecasts/benchmark.json`,
+`data/forecasts/benchmark.md` and the weekly frame CSV. Metric definitions
+and the backtest rules are also in
+[the forecasting note](docs/architecture/forecasting-baselines.md).
+
+Pass `--persist` to store each fold as a `ForecastRun` with its predictions.
 
 ## Docker
 
@@ -166,6 +202,7 @@ PostgreSQL by default; the `full` profile adds the API and web services.
 - [ADR-001 — Monorepo and Local-First Development Strategy](docs/adr/ADR-001-monorepo-and-local-first-development.md)
 - [ADR-002 — Core Retail Domain Model and Persistence Conventions](docs/adr/ADR-002-core-retail-domain-model.md)
 - [ADR-003 — Synthetic Retail Dataset and Ingestion](docs/adr/ADR-003-synthetic-data-and-ingestion.md)
+- [ADR-004 — Forecast Evaluation and Baselines](docs/adr/ADR-004-forecast-evaluation.md)
 
 ## Security baseline
 

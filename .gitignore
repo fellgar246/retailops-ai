@@ -43,6 +43,7 @@ crash.log
 data/raw/*
 data/processed/*
 data/synthetic/*
+data/forecasts/*
 !data/**/.gitkeep
 
 # --- Notebooks ---
