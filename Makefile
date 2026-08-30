@@ -5,7 +5,7 @@ NPM := npm --prefix $(WEB_DIR)
 
 .DEFAULT_GOAL := help
 .PHONY: help setup env dev api web db-up db-down db-logs db-shell migrate migration \
-        autogenerate db-reset seed synthetic forecast test test-api test-web \
+        autogenerate db-reset seed synthetic forecast train test test-api test-web \
         lint lint-api lint-web format format-check typecheck build docker-build \
         stack-up stack-down clean
 
@@ -62,6 +62,9 @@ synthetic: ## Generate, validate and ingest the development synthetic dataset
 
 forecast: ## Walk-forward the demand baselines and write the benchmark
 	cd $(API_DIR) && uv run retailops-forecast --output "$(CURDIR)/data/forecasts"
+
+train: ## Train the demand model, evaluate it and register a local candidate
+	cd $(API_DIR) && uv run retailops-train --output "$(CURDIR)/data/forecasts" --registry "$(CURDIR)/artifacts/models"
 
 test: test-api test-web ## Run all tests
 

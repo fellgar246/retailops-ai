@@ -46,6 +46,10 @@ data/synthetic/*
 data/forecasts/*
 !data/**/.gitkeep
 
+# --- Model artifacts (keep directory structure only) ---
+artifacts/models/*
+!artifacts/**/.gitkeep
+
 # --- Notebooks ---
 .ipynb_checkpoints/
 

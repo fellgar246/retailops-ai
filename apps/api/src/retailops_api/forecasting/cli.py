@@ -10,15 +10,12 @@ Or, from ``apps/api``:
 from __future__ import annotations
 
 import argparse
-import csv
 import sys
 from collections.abc import Sequence
 from datetime import UTC, date, datetime
 from pathlib import Path
 
 from retailops_api.dataset.contract import Dataset
-from retailops_api.dataset.snapshot import dataset_checksum, load_dataset
-from retailops_api.dataset.validate import assert_valid
 from retailops_api.forecasting.benchmark import (
     BENCHMARK_JSON,
     BENCHMARK_MARKDOWN,
@@ -28,12 +25,7 @@ from retailops_api.forecasting.benchmark import (
     run_benchmark,
     write_benchmark,
 )
-from retailops_api.forecasting.frame import (
-    FRAME_COLUMNS,
-    ForecastFrame,
-    build_forecast_frame,
-    frame_to_rows,
-)
+from retailops_api.forecasting.frame import ForecastFrame
 from retailops_api.forecasting.persist import persist_backtest
 from retailops_api.forecasting.problem import (
     DEFAULT_HORIZON_WEEKS,
@@ -44,10 +36,13 @@ from retailops_api.forecasting.problem import (
     DEFAULT_TEST_PERIODS,
     DEFAULT_VALIDATION_PERIODS,
 )
-from retailops_api.synthetic.config import GeneratorConfig, ScalePreset
-from retailops_api.synthetic.generate import generate_dataset
-
-FRAME_FILE = "forecast_frame.csv"
+from retailops_api.forecasting.sources import (
+    FRAME_FILE,
+    default_forecast_output,
+    load_forecast_dataset,
+    write_frame_csv,
+)
+from retailops_api.synthetic.config import ScalePreset
 
 
 def main(argv: Sequence[str] | None = None) -> int:
@@ -113,7 +108,7 @@ def _parse_args(argv: Sequence[str] | None) -> argparse.Namespace:
 def _write_frame(args: argparse.Namespace) -> None:
     _, _, frame = _load_or_generate(args)
     output = _output_dir(args)
-    _write_frame_csv(frame, output / FRAME_FILE)
+    write_frame_csv(frame, output / FRAME_FILE)
     print(
         f"wrote {output / FRAME_FILE}  rows={len(frame.rows)}  "
         f"entities={len(frame.entities())}  weeks={len(frame.periods())}"
@@ -123,7 +118,7 @@ def _write_frame(args: argparse.Namespace) -> None:
 def _run_benchmark(args: argparse.Namespace) -> None:
     _, summary, frame = _load_or_generate(args)
     output = _output_dir(args)
-    _write_frame_csv(frame, output / FRAME_FILE)
+    write_frame_csv(frame, output / FRAME_FILE)
     report = run_benchmark(frame, dataset=summary, config=_config_from_args(args))
     write_benchmark(report, output)
     if args.persist:
@@ -141,44 +136,14 @@ def _run_benchmark(args: argparse.Namespace) -> None:
 
 
 def _load_or_generate(args: argparse.Namespace) -> tuple[Dataset, DatasetSummary, ForecastFrame]:
-    if args.input is not None:
-        dataset = load_dataset(args.input)
-        assert_valid(dataset)
-        start, end = _span(dataset)
-        summary = DatasetSummary(
-            source=args.source or f"file:{args.input}",
-            start_date=start,
-            end_date=end,
-            checksum=dataset_checksum(dataset),
-            complete_weeks=0,
-            entity_count=0,
-            row_count=0,
-        )
-    else:
-        config = _generator_config(args)
-        dataset = generate_dataset(config)
-        assert_valid(dataset)
-        start, end = _span(dataset)
-        summary = DatasetSummary(
-            source=args.source or f"synthetic:{config.preset or 'custom'}",
-            start_date=start,
-            end_date=end,
-            checksum=dataset_checksum(dataset),
-            complete_weeks=0,
-            entity_count=0,
-            row_count=0,
-        )
-    frame = build_forecast_frame(dataset)
-    summary = DatasetSummary(
-        source=summary.source,
-        start_date=summary.start_date,
-        end_date=summary.end_date,
-        checksum=summary.checksum,
-        complete_weeks=len(frame.periods()),
-        entity_count=len(frame.entities()),
-        row_count=len(frame.rows),
+    return load_forecast_dataset(
+        input_path=args.input,
+        preset=args.preset,
+        seed=args.seed,
+        start_date=args.start_date,
+        end_date=args.end_date,
+        source=args.source,
     )
-    return dataset, summary, frame
 
 
 def _config_from_args(args: argparse.Namespace) -> BenchmarkConfig:
@@ -191,15 +156,6 @@ def _config_from_args(args: argparse.Namespace) -> BenchmarkConfig:
         validation_periods=args.validation_periods,
         test_periods=args.test_periods,
     )
-
-
-def _generator_config(args: argparse.Namespace) -> GeneratorConfig:
-    overrides: dict[str, object] = {}
-    for field in ("seed", "start_date", "end_date"):
-        value = getattr(args, field, None)
-        if value is not None:
-            overrides[field] = value
-    return GeneratorConfig.from_preset(args.preset, **overrides)
 
 
 def _persist(report: BenchmarkReport) -> None:
@@ -228,32 +184,10 @@ def _persist(report: BenchmarkReport) -> None:
     print("persisted forecast runs")
 
 
-def _write_frame_csv(frame: ForecastFrame, path: Path) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    with path.open("w", encoding="utf-8", newline="") as handle:
-        writer = csv.writer(handle, lineterminator="\n")
-        writer.writerow(FRAME_COLUMNS)
-        writer.writerows(frame_to_rows(frame))
-
-
-def _span(dataset: Dataset) -> tuple[date | None, date | None]:
-    dates = [row.business_date for row in dataset.sales]
-    if not dates:
-        return None, None
-    return min(dates), max(dates)
-
-
 def _output_dir(args: argparse.Namespace) -> Path:
     if args.output is not None:
         return Path(args.output)
-    return find_repo_root() / "data" / "forecasts"
-
-
-def find_repo_root() -> Path:
-    for candidate in (Path.cwd(), *Path.cwd().parents):
-        if (candidate / "apps" / "api" / "pyproject.toml").exists():
-            return candidate
-    return Path.cwd()
+    return default_forecast_output()
 
 
 def _date(value: str) -> date:

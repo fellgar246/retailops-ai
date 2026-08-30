@@ -5,8 +5,9 @@ Retail operations intelligence platform. This repository currently contains:
 - **The engineering foundation** — a FastAPI backend, a Next.js frontend, a local PostgreSQL database and the tooling needed to develop, test and containerize them.
 - **The core retail domain** — the product catalog (categories, products, suppliers, supplier terms, stores) and the daily sales-history model, with migrations, data-access helpers, development seed data and a deterministic synthetic history generator.
 - **Forecast evaluation** — a weekly category-demand frame, time-based splits, naive / seasonal-naive / moving-average baselines, walk-forward backtesting, and persisted forecast runs.
+- **ML forecasting** — calendar, lag and rolling features, a histogram gradient-boosted demand model, champion/challenger promotion, and a local filesystem model registry.
 
-The ML training pipeline, document intelligence and AWS deployment are not implemented yet.
+Document intelligence and AWS deployment are not implemented yet.
 
 ## Prerequisites
 
@@ -48,7 +49,8 @@ retailops/
 ├── apps/
 │   ├── api/          FastAPI backend (src layout, tests, Alembic migrations)
 │   └── web/          Next.js frontend (App Router, TypeScript, Vitest)
-├── ml/               ML training pipeline (not yet implemented)
+├── ml/               Optional notebooks (training lives in the API package)
+├── artifacts/        Local model registry versions (git-ignored)
 ├── infra/            Terraform modules and environments (not yet implemented)
 ├── data/             Local raw/processed/synthetic data (git-ignored)
 ├── docs/             Architecture notes and ADRs
@@ -66,6 +68,7 @@ make migrate    # apply Alembic migrations
 make seed       # load development reference data (safe to re-run)
 make synthetic  # generate, validate and ingest a year of synthetic sales
 make forecast   # walk-forward the demand baselines and write the benchmark
+make train      # train the demand model, evaluate it and register a local candidate
 make dev        # run API (:8000) and web (:3000) together
 ```
 
@@ -115,6 +118,7 @@ make autogenerate m="add x"      # create a revision from model changes
 make seed                        # load reference data (idempotent)
 make synthetic                   # regenerate and ingest synthetic history
 make forecast                    # walk-forward baselines; writes data/forecasts/
+make train                       # train the demand model; writes data/forecasts/ and artifacts/models/
 make db-reset                    # rebuild the schema from scratch and re-seed
 ```
 
@@ -178,6 +182,35 @@ and the backtest rules are also in
 
 Pass `--persist` to store each fold as a `ForecastRun` with its predictions.
 
+## ML forecasting and the local registry
+
+Features available at an origin are the calendar of the target week, lags and
+shifted rolling statistics of history on or before the cutoff, lagged price /
+discount / promotion / stock, and store or category identifiers. The target
+week's own sales measures are excluded: using them would leak the label.
+
+`make train` builds that matrix, fits one histogram gradient-boosted model
+with an explicit config, scores the candidate against the three baselines
+(and the current champion, when one exists) from the locked train-end
+origin, writes a reloadable artifact, and registers it under
+`artifacts/models/category-forecast/v001`. Promotion requires a strict WAPE
+win against every comparison model **and** no MAE regression versus the
+champion (or the best baseline when there is no champion). A single-metric
+win is not enough. Pass `--promote` to apply that policy and set the
+champion when both gates pass.
+
+Reload a version with the same `predict(history, cutoff, horizon)` interface
+the baselines use. The on-disk package includes the booster, feature list,
+training config, metrics, data fingerprint and runtime versions, so it does
+not depend on notebook state.
+
+The registry operations (register, list, get, update approval, get champion)
+are storage-neutral. The local implementation is a directory of versions;
+the same calls map onto SageMaker Model Registry (`CreateModelPackage`,
+`ModelPackageVersion`, `ModelApprovalStatus`, the approved package an
+endpoint loads). Details are in
+[the ML forecasting note](docs/architecture/ml-forecasting.md).
+
 ## Docker
 
 ```bash
@@ -203,6 +236,7 @@ PostgreSQL by default; the `full` profile adds the API and web services.
 - [ADR-002 — Core Retail Domain Model and Persistence Conventions](docs/adr/ADR-002-core-retail-domain-model.md)
 - [ADR-003 — Synthetic Retail Dataset and Ingestion](docs/adr/ADR-003-synthetic-data-and-ingestion.md)
 - [ADR-004 — Forecast Evaluation and Baselines](docs/adr/ADR-004-forecast-evaluation.md)
+- [ADR-005 — ML Forecasting and Local Model Registry](docs/adr/ADR-005-ml-forecasting-and-model-registry.md)
 
 ## Security baseline
 

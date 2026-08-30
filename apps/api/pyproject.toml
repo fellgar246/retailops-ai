@@ -12,12 +12,16 @@ dependencies = [
     "sqlalchemy>=2.0.36",
     "psycopg[binary]>=3.2.3",
     "alembic>=1.14.0",
+    "numpy>=2.0.0",
+    "scikit-learn>=1.5.0",
+    "joblib>=1.4.0",
 ]
 
 [project.scripts]
 retailops-seed = "retailops_api.db.seed:main"
 retailops-synthetic = "retailops_api.ingestion.cli:main"
 retailops-forecast = "retailops_api.forecasting.cli:main"
+retailops-train = "retailops_api.forecasting.train_cli:main"
 
 [dependency-groups]
 dev = [
@@ -59,3 +63,7 @@ files = ["src", "tests"]
 explicit_package_bases = true
 strict = true
 plugins = ["pydantic.mypy"]
+
+[[tool.mypy.overrides]]
+module = ["sklearn.*", "joblib"]
+ignore_missing_imports = true

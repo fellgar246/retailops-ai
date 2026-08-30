@@ -12,6 +12,7 @@ uv run alembic upgrade head   # apply migrations
 uv run retailops-seed         # load development reference data (idempotent)
 uv run retailops-synthetic    # generate, validate and ingest synthetic history
 uv run retailops-forecast     # walk-forward demand baselines and write the benchmark
+uv run retailops-train        # train the demand model, evaluate it and register a local candidate
 ```
 
 Endpoints:
@@ -27,7 +28,7 @@ Layout:
 - `src/retailops_api/dataset/` — portable CSV contract, validation and snapshots
 - `src/retailops_api/synthetic/` — deterministic catalog, calendar and demand generators
 - `src/retailops_api/ingestion/` — idempotent catalog upsert, batch sales upsert, run report
-- `src/retailops_api/forecasting/` — weekly demand frame, temporal splits, baselines, metrics, walk-forward backtest
+- `src/retailops_api/forecasting/` — weekly demand frame, features, baselines, histogram-GBM training, local model registry
 - `migrations/` — Alembic revisions
 
 The retail schema is documented in
