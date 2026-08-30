@@ -1,5 +1,6 @@
 """The shared persistence conventions the whole schema relies on."""
 
+import re
 from pathlib import Path
 
 import pytest
@@ -93,3 +94,36 @@ def test_alembic_discovers_the_domain_metadata() -> None:
 
     revisions = [revision.revision for revision in script.walk_revisions()]
     assert len(revisions) == len(set(revisions))
+
+
+# Planning documents are not part of the delivered system. Shipped text must
+# describe capabilities, not numbered planning artefacts.
+_PLANNING_REFERENCE = re.compile(
+    r"\bSpec\s+\d+\b|\bBlock\s+\d+\b|\blater\s+block\b|\bnext\s+block\b",
+    re.IGNORECASE,
+)
+_SHIPPED_TEXT_SUFFIXES = {".py", ".md"}
+_SHIPPED_ROOTS = (
+    API_ROOT / "src",
+    API_ROOT / "tests",
+    API_ROOT / "README.md",
+    API_ROOT.parents[1] / "README.md",
+    API_ROOT.parents[1] / "Makefile",
+)
+
+
+def _is_shipped_text(path: Path) -> bool:
+    return path.is_file() and (path.suffix in _SHIPPED_TEXT_SUFFIXES or path.name == "Makefile")
+
+
+def test_shipped_text_does_not_refer_to_planning_artefacts() -> None:
+    hits: list[str] = []
+    for root in _SHIPPED_ROOTS:
+        paths = [root] if root.is_file() else root.rglob("*")
+        for path in paths:
+            if not _is_shipped_text(path):
+                continue
+            text = path.read_text(encoding="utf-8")
+            for match in _PLANNING_REFERENCE.finditer(text):
+                hits.append(f"{path}:{match.group(0)}")
+    assert hits == []

@@ -3,7 +3,7 @@
 Retail operations intelligence platform. This repository currently contains:
 
 - **The engineering foundation** — a FastAPI backend, a Next.js frontend, a local PostgreSQL database and the tooling needed to develop, test and containerize them.
-- **The core retail domain** — the product catalog (categories, products, suppliers, supplier terms, stores) and the daily sales-history model, with migrations, data-access helpers and development seed data.
+- **The core retail domain** — the product catalog (categories, products, suppliers, supplier terms, stores) and the daily sales-history model, with migrations, data-access helpers, development seed data and a deterministic synthetic history generator.
 
 Forecasting, document intelligence and AWS deployment are not implemented yet.
 
@@ -63,6 +63,7 @@ retailops/
 make db-up      # start PostgreSQL and wait until healthy
 make migrate    # apply Alembic migrations
 make seed       # load development reference data (safe to re-run)
+make synthetic  # generate, validate and ingest a year of synthetic sales
 make dev        # run API (:8000) and web (:3000) together
 ```
 
@@ -110,6 +111,7 @@ make migrate                     # alembic upgrade head
 make migration m="add products"  # create an empty revision
 make autogenerate m="add x"      # create a revision from model changes
 make seed                        # load reference data (idempotent)
+make synthetic                   # regenerate and ingest synthetic history
 make db-reset                    # rebuild the schema from scratch and re-seed
 ```
 
@@ -132,6 +134,13 @@ modelling rationale in [ADR-002](docs/adr/ADR-002-core-retail-domain-model.md).
 
 `make seed` loads a deterministic development catalog. It is idempotent, so
 running it repeatedly neither duplicates nor disturbs existing rows.
+
+`make synthetic` is the one command that regenerates the development dataset:
+it writes CSV files under `data/synthetic/`, validates them, and upserts the
+catalog and daily sales into the configured database. Re-running it is safe.
+The same seed and configuration always produce the same checksum. The file
+contract (columns, keys, units, date and decimal formats) is documented in
+[the synthetic dataset note](docs/architecture/synthetic-retail-dataset.md).
 
 ## Docker
 
@@ -156,6 +165,7 @@ PostgreSQL by default; the `full` profile adds the API and web services.
 
 - [ADR-001 — Monorepo and Local-First Development Strategy](docs/adr/ADR-001-monorepo-and-local-first-development.md)
 - [ADR-002 — Core Retail Domain Model and Persistence Conventions](docs/adr/ADR-002-core-retail-domain-model.md)
+- [ADR-003 — Synthetic Retail Dataset and Ingestion](docs/adr/ADR-003-synthetic-data-and-ingestion.md)
 
 ## Security baseline
 

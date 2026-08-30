@@ -70,7 +70,7 @@ def test_seeding_is_repeatable_many_times(session: Session) -> None:
 
 
 def test_seeding_does_not_invent_sales_history(session: Session) -> None:
-    """Sales history is generated synthetically elsewhere; seeding is catalog only."""
+    """Sales history is produced by the synthetic generator; seeding is catalog only."""
     seed_reference_data(session)
 
     assert _count(session, SalesRecord) == 0

@@ -5,7 +5,7 @@ NPM := npm --prefix $(WEB_DIR)
 
 .DEFAULT_GOAL := help
 .PHONY: help setup env dev api web db-up db-down db-logs db-shell migrate migration \
-        autogenerate db-reset seed test test-api test-web lint lint-api lint-web \
+        autogenerate db-reset seed synthetic test test-api test-web lint lint-api lint-web \
         format format-check typecheck build docker-build stack-up stack-down clean
 
 help: ## Show available targets
@@ -55,6 +55,9 @@ db-reset: ## Drop the schema, re-apply every migration and re-seed
 
 seed: ## Load deterministic development reference data (idempotent)
 	cd $(API_DIR) && uv run retailops-seed
+
+synthetic: ## Generate, validate and ingest the development synthetic dataset
+	cd $(API_DIR) && uv run retailops-synthetic --output "$(CURDIR)/data/synthetic"
 
 test: test-api test-web ## Run all tests
 

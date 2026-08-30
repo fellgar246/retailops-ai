@@ -16,6 +16,7 @@ dependencies = [
 
 [project.scripts]
 retailops-seed = "retailops_api.db.seed:main"
+retailops-synthetic = "retailops_api.ingestion.cli:main"
 
 [dependency-groups]
 dev = [
