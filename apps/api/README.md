@@ -14,6 +14,7 @@ uv run retailops-synthetic    # generate, validate and ingest synthetic history
 uv run retailops-forecast     # walk-forward demand baselines and write the benchmark
 uv run retailops-train        # train the demand model, evaluate it and register a local candidate
 uv run retailops-documents    # store, parse and validate a supplier sheet
+uv run retailops-reconcile    # three-way match a purchase order or invoice
 ```
 
 Endpoints:
@@ -31,6 +32,7 @@ Layout:
 - `src/retailops_api/ingestion/` — idempotent catalog upsert, batch sales upsert, run report
 - `src/retailops_api/forecasting/` — weekly demand frame, features, baselines, histogram-GBM training, local model registry
 - `src/retailops_api/documents/` — supplier-sheet intake, local storage, parsers and deterministic rules
+- `src/retailops_api/procurement/` — purchase orders, receipts, invoices and deterministic three-way match
 - `migrations/` — Alembic revisions
 
 The retail schema is documented in

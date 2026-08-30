@@ -7,6 +7,7 @@ Retail operations intelligence platform. This repository currently contains:
 - **Forecast evaluation** — a weekly category-demand frame, time-based splits, naive / seasonal-naive / moving-average baselines, walk-forward backtesting, and persisted forecast runs.
 - **ML forecasting** — calendar, lag and rolling features, a histogram gradient-boosted demand model, champion/challenger promotion, and a local filesystem model registry.
 - **Supplier document intake** — store a CSV, XLSX or text PDF locally, parse it onto a canonical offer sheet, run deterministic validation against the catalog, and persist findings.
+- **Procurement and reconciliation** — persist purchase orders, goods receipts and supplier invoices, then run a deterministic three-way match with explicit tolerances.
 
 AI review, hosted object storage, document-analysis APIs and AWS deployment are not implemented yet.
 
@@ -72,6 +73,7 @@ make synthetic  # generate, validate and ingest a year of synthetic sales
 make forecast   # walk-forward the demand baselines and write the benchmark
 make train      # train the demand model, evaluate it and register a local candidate
 make documents file=apps/api/tests/fixtures/supplier_documents/valid.csv supplier=SUP-BEVCO
+make reconcile supplier=SUP-BEVCO invoice=INV-1001
 make dev        # run API (:8000) and web (:3000) together
 ```
 
@@ -123,6 +125,7 @@ make synthetic                   # regenerate and ingest synthetic history
 make forecast                    # walk-forward baselines; writes data/forecasts/
 make train                       # train the demand model; writes data/forecasts/ and artifacts/models/
 make documents file=… supplier=… # store, parse and validate a supplier sheet
+make reconcile supplier=… invoice=…  # three-way match an invoice (or po=…)
 make db-reset                    # rebuild the schema from scratch and re-seed
 ```
 
@@ -146,6 +149,14 @@ modelling rationale in [ADR-002](docs/adr/ADR-002-core-retail-domain-model.md).
 | ForecastPrediction | `forecast_predictions` | One predicted week per store and category, with actual when known |
 | SupplierDocument | `supplier_documents` | A stored supplier file (key, checksum, type, status) |
 | DocumentFinding | `document_findings` | One deterministic observation about that file |
+| PurchaseOrder | `purchase_orders` | An order placed with one supplier for one store |
+| PurchaseOrderLine | `purchase_order_lines` | Ordered quantity, unit cost, tax and line total |
+| GoodsReceipt | `goods_receipts` | A delivery, optionally against a purchase order |
+| GoodsReceiptLine | `goods_receipt_lines` | Received quantity of one product |
+| SupplierInvoice | `supplier_invoices` | A supplier bill, unique per supplier and number |
+| SupplierInvoiceLine | `supplier_invoice_lines` | Invoiced quantity, unit cost, tax and line total |
+| ReconciliationRun | `reconciliation_runs` | One deterministic three-way match (versioned by scope) |
+| ReconciliationException | `reconciliation_exceptions` | What does not match, with signed financial impact |
 
 `make seed` loads a deterministic development catalog. It is idempotent, so
 running it repeatedly neither duplicates nor disturbs existing rows.
@@ -229,6 +240,16 @@ Findings are persisted; the document ends `review_ready` or `parse_failed`.
 Storage is a contract — the local directory is one implementation. Details
 are in [the intake note](docs/architecture/supplier-document-intake.md).
 
+## Procurement and reconciliation
+
+Purchase orders, goods receipts and supplier invoices are first-class rows.
+`make reconcile` loads an invoice (or a purchase order), the other documents
+that belong to that order, matches lines without guessing, compares ordered /
+received / invoiced quantities and PO vs invoice cost, and persists a
+versioned run plus exceptions. Tolerances default to zero. Re-running the
+same documents and tolerances returns the existing run. Details are in
+[the procurement note](docs/architecture/procurement-reconciliation.md).
+
 ## Docker
 
 ```bash
@@ -256,6 +277,7 @@ PostgreSQL by default; the `full` profile adds the API and web services.
 - [ADR-004 — Forecast Evaluation and Baselines](docs/adr/ADR-004-forecast-evaluation.md)
 - [ADR-005 — ML Forecasting and Local Model Registry](docs/adr/ADR-005-ml-forecasting-and-model-registry.md)
 - [ADR-006 — Supplier Document Intake and Deterministic Validation](docs/adr/ADR-006-supplier-document-intake.md)
+- [ADR-007 — Procurement Documents and Deterministic Reconciliation](docs/adr/ADR-007-procurement-reconciliation.md)
 
 ## Security baseline
 

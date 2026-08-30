@@ -5,9 +5,9 @@ NPM := npm --prefix $(WEB_DIR)
 
 .DEFAULT_GOAL := help
 .PHONY: help setup env dev api web db-up db-down db-logs db-shell migrate migration \
-        autogenerate db-reset seed synthetic forecast train documents test test-api \
-        test-web lint lint-api lint-web format format-check typecheck build \
-        docker-build stack-up stack-down clean
+        autogenerate db-reset seed synthetic forecast train documents reconcile \
+        test test-api test-web lint lint-api lint-web format format-check typecheck \
+        build docker-build stack-up stack-down clean
 
 help: ## Show available targets
 	@grep -hE '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) \
@@ -68,6 +68,9 @@ train: ## Train the demand model, evaluate it and register a local candidate
 
 documents: ## Ingest a supplier sheet: make documents file=path supplier=SUP-BEVCO
 	cd $(API_DIR) && uv run retailops-documents --file "$(file)" --supplier "$(supplier)" --storage "$(CURDIR)/data/documents"
+
+reconcile: ## Three-way match: make reconcile supplier=SUP-BEVCO invoice=INV-1001
+	cd $(API_DIR) && uv run retailops-reconcile --supplier "$(supplier)" $(if $(invoice),--invoice "$(invoice)") $(if $(po),--po "$(po)")
 
 test: test-api test-web ## Run all tests
 

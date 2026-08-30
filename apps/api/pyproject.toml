@@ -25,6 +25,7 @@ retailops-synthetic = "retailops_api.ingestion.cli:main"
 retailops-forecast = "retailops_api.forecasting.cli:main"
 retailops-train = "retailops_api.forecasting.train_cli:main"
 retailops-documents = "retailops_api.documents.cli:main"
+retailops-reconcile = "retailops_api.procurement.cli:main"
 
 [dependency-groups]
 dev = [

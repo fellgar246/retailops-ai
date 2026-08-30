@@ -26,10 +26,18 @@ DOMAIN_TABLES = {
     "document_findings",
     "forecast_predictions",
     "forecast_runs",
+    "goods_receipt_lines",
+    "goods_receipts",
     "products",
+    "purchase_order_lines",
+    "purchase_orders",
+    "reconciliation_exceptions",
+    "reconciliation_runs",
     "sales_records",
     "stores",
     "supplier_documents",
+    "supplier_invoice_lines",
+    "supplier_invoices",
     "supplier_products",
     "suppliers",
 }
@@ -153,6 +161,61 @@ def test_every_table_has_its_primary_key(migrated: URL, table_name: str) -> None
             {"ix_supplier_documents_status", "ix_supplier_documents_supplier_id"},
         ),
         ("document_findings", {"ix_document_findings_document_id"}),
+        (
+            "purchase_orders",
+            {
+                "ix_purchase_orders_status",
+                "ix_purchase_orders_store_id",
+                "ix_purchase_orders_supplier_id",
+            },
+        ),
+        (
+            "purchase_order_lines",
+            {
+                "ix_purchase_order_lines_product_id",
+                "ix_purchase_order_lines_purchase_order_id",
+            },
+        ),
+        (
+            "goods_receipts",
+            {
+                "ix_goods_receipts_purchase_order_id",
+                "ix_goods_receipts_status",
+                "ix_goods_receipts_supplier_id",
+            },
+        ),
+        (
+            "goods_receipt_lines",
+            {
+                "ix_goods_receipt_lines_goods_receipt_id",
+                "ix_goods_receipt_lines_product_id",
+                "ix_goods_receipt_lines_purchase_order_line_id",
+            },
+        ),
+        (
+            "supplier_invoices",
+            {
+                "ix_supplier_invoices_purchase_order_id",
+                "ix_supplier_invoices_status",
+                "ix_supplier_invoices_supplier_id",
+            },
+        ),
+        (
+            "supplier_invoice_lines",
+            {
+                "ix_supplier_invoice_lines_product_id",
+                "ix_supplier_invoice_lines_supplier_invoice_id",
+            },
+        ),
+        ("reconciliation_runs", {"ix_reconciliation_runs_scope_key"}),
+        (
+            "reconciliation_exceptions",
+            {
+                "ix_reconciliation_exceptions_code",
+                "ix_reconciliation_exceptions_reconciliation_run_id",
+                "ix_reconciliation_exceptions_resolution_status",
+            },
+        ),
     ],
 )
 def test_expected_indexes_exist(migrated: URL, table_name: str, expected: set[str]) -> None:
@@ -171,6 +234,44 @@ def test_expected_indexes_exist(migrated: URL, table_name: str, expected: set[st
         ("forecast_predictions", {("forecast_run_id",): "forecast_runs"}),
         ("supplier_documents", {("supplier_id",): "suppliers"}),
         ("document_findings", {("document_id",): "supplier_documents"}),
+        ("purchase_orders", {("supplier_id",): "suppliers", ("store_id",): "stores"}),
+        (
+            "purchase_order_lines",
+            {("purchase_order_id",): "purchase_orders", ("product_id",): "products"},
+        ),
+        (
+            "goods_receipts",
+            {("supplier_id",): "suppliers", ("purchase_order_id",): "purchase_orders"},
+        ),
+        (
+            "goods_receipt_lines",
+            {
+                ("goods_receipt_id",): "goods_receipts",
+                ("product_id",): "products",
+                ("purchase_order_line_id",): "purchase_order_lines",
+            },
+        ),
+        (
+            "supplier_invoices",
+            {("supplier_id",): "suppliers", ("purchase_order_id",): "purchase_orders"},
+        ),
+        (
+            "supplier_invoice_lines",
+            {("supplier_invoice_id",): "supplier_invoices", ("product_id",): "products"},
+        ),
+        (
+            "reconciliation_exceptions",
+            {
+                ("reconciliation_run_id",): "reconciliation_runs",
+                ("purchase_order_id",): "purchase_orders",
+                ("purchase_order_line_id",): "purchase_order_lines",
+                ("goods_receipt_id",): "goods_receipts",
+                ("goods_receipt_line_id",): "goods_receipt_lines",
+                ("supplier_invoice_id",): "supplier_invoices",
+                ("supplier_invoice_line_id",): "supplier_invoice_lines",
+                ("product_id",): "products",
+            },
+        ),
     ],
 )
 def test_foreign_keys_point_where_they_should(
@@ -213,6 +314,37 @@ def test_supplier_documents_restrict_supplier_deletes(migrated: URL) -> None:
         assert fk["options"].get("ondelete") == "RESTRICT", fk["name"]
 
 
+def test_purchase_order_lines_are_removed_with_their_order(migrated: URL) -> None:
+    foreign_keys = {
+        tuple(fk["constrained_columns"]): fk["options"].get("ondelete")
+        for fk in _inspector(migrated).get_foreign_keys("purchase_order_lines")
+    }
+    assert foreign_keys[("purchase_order_id",)] == "CASCADE"
+    assert foreign_keys[("product_id",)] == "RESTRICT"
+
+
+def test_receipt_and_invoice_lines_are_removed_with_their_header(migrated: URL) -> None:
+    receipt = {
+        tuple(fk["constrained_columns"]): fk["options"].get("ondelete")
+        for fk in _inspector(migrated).get_foreign_keys("goods_receipt_lines")
+    }
+    invoice = {
+        tuple(fk["constrained_columns"]): fk["options"].get("ondelete")
+        for fk in _inspector(migrated).get_foreign_keys("supplier_invoice_lines")
+    }
+    assert receipt[("goods_receipt_id",)] == "CASCADE"
+    assert invoice[("supplier_invoice_id",)] == "CASCADE"
+
+
+def test_reconciliation_exceptions_are_removed_with_their_run(migrated: URL) -> None:
+    """A run owns its exceptions; they have no meaning once the run is gone."""
+    foreign_keys = _inspector(migrated).get_foreign_keys("reconciliation_exceptions")
+    run_fk = next(
+        fk for fk in foreign_keys if fk["constrained_columns"] == ["reconciliation_run_id"]
+    )
+    assert run_fk["options"].get("ondelete") == "CASCADE"
+
+
 @pytest.mark.parametrize(
     ("table_name", "expected"),
     [
@@ -227,6 +359,16 @@ def test_supplier_documents_restrict_supplier_deletes(migrated: URL) -> None:
             {"uq_forecast_predictions_run_entity_week"},
         ),
         ("supplier_documents", {"uq_supplier_documents_storage_key"}),
+        ("purchase_orders", {"uq_purchase_orders_supplier_id_po_number"}),
+        ("purchase_order_lines", {"uq_purchase_order_lines_purchase_order_id_line_number"}),
+        ("goods_receipts", {"uq_goods_receipts_supplier_id_receipt_number"}),
+        ("goods_receipt_lines", {"uq_goods_receipt_lines_goods_receipt_id_line_number"}),
+        ("supplier_invoices", {"uq_supplier_invoices_supplier_id_invoice_number"}),
+        (
+            "supplier_invoice_lines",
+            {"uq_supplier_invoice_lines_supplier_invoice_id_line_number"},
+        ),
+        ("reconciliation_runs", {"uq_reconciliation_runs_scope_key_version"}),
     ],
 )
 def test_unique_constraints_exist(migrated: URL, table_name: str, expected: set[str]) -> None:
@@ -276,6 +418,52 @@ def test_unique_constraints_exist(migrated: URL, table_name: str, expected: set[
             },
         ),
         ("document_findings", {"ck_document_findings_severity_known"}),
+        (
+            "purchase_orders",
+            {"ck_purchase_orders_status_known", "ck_purchase_orders_currency_iso"},
+        ),
+        (
+            "purchase_order_lines",
+            {
+                "ck_purchase_order_lines_line_number_positive",
+                "ck_purchase_order_lines_ordered_quantity_positive",
+                "ck_purchase_order_lines_unit_cost_non_negative",
+            },
+        ),
+        ("goods_receipts", {"ck_goods_receipts_status_known"}),
+        (
+            "goods_receipt_lines",
+            {
+                "ck_goods_receipt_lines_line_number_positive",
+                "ck_goods_receipt_lines_received_quantity_positive",
+            },
+        ),
+        (
+            "supplier_invoices",
+            {"ck_supplier_invoices_status_known", "ck_supplier_invoices_currency_iso"},
+        ),
+        (
+            "supplier_invoice_lines",
+            {
+                "ck_supplier_invoice_lines_line_number_positive",
+                "ck_supplier_invoice_lines_invoiced_quantity_positive",
+                "ck_supplier_invoice_lines_unit_cost_non_negative",
+            },
+        ),
+        (
+            "reconciliation_runs",
+            {
+                "ck_reconciliation_runs_version_positive",
+                "ck_reconciliation_runs_exception_count_non_negative",
+            },
+        ),
+        (
+            "reconciliation_exceptions",
+            {
+                "ck_reconciliation_exceptions_severity_known",
+                "ck_reconciliation_exceptions_resolution_known",
+            },
+        ),
     ],
 )
 def test_check_constraints_exist(migrated: URL, table_name: str, expected: set[str]) -> None:

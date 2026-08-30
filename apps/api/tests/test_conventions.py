@@ -16,10 +16,18 @@ EXPECTED_TABLES = {
     "document_findings",
     "forecast_predictions",
     "forecast_runs",
+    "goods_receipt_lines",
+    "goods_receipts",
     "products",
+    "purchase_order_lines",
+    "purchase_orders",
+    "reconciliation_exceptions",
+    "reconciliation_runs",
     "sales_records",
     "stores",
     "supplier_documents",
+    "supplier_invoice_lines",
+    "supplier_invoices",
     "supplier_products",
     "suppliers",
 }
@@ -28,6 +36,7 @@ IMMUTABLE_FACT_TABLES = {
     "document_findings",
     "forecast_predictions",
     "forecast_runs",
+    "reconciliation_runs",
     "sales_records",
 }
 
@@ -80,7 +89,7 @@ def test_mutable_tables_track_updates_and_lifecycle(table_name: str) -> None:
 
 @pytest.mark.parametrize("table_name", sorted(IMMUTABLE_FACT_TABLES))
 def test_fact_tables_are_immutable_once_written(table_name: str) -> None:
-    """Sales facts and forecast results are not edited in place."""
+    """Sales facts, forecast results and reconciliation runs are not edited in place."""
     columns = Base.metadata.tables[table_name].columns
     assert "updated_at" not in columns
     assert "active" not in columns
