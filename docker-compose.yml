@@ -1,0 +1,57 @@
+name: retailops
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: retailops-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-retailops}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-retailops}
+      POSTGRES_DB: ${POSTGRES_DB:-retailops}
+    ports:
+      # 5435 by default so the container never collides with a host PostgreSQL.
+      - "${POSTGRES_PORT:-5435}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test:
+        ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-retailops} -d ${POSTGRES_DB:-retailops}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+
+  api:
+    profiles: ["full"]
+    build:
+      context: ./apps/api
+    container_name: retailops-api
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-retailops}:${POSTGRES_PASSWORD:-retailops}@postgres:5432/${POSTGRES_DB:-retailops}
+      CORS_ORIGINS: http://localhost:3000
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  web:
+    profiles: ["full"]
+    build:
+      context: ./apps/web
+      args:
+        NEXT_PUBLIC_API_BASE_URL: http://localhost:8000
+    container_name: retailops-web
+    restart: unless-stopped
+    environment:
+      NEXT_PUBLIC_API_BASE_URL: http://localhost:8000
+    ports:
+      - "3000:3000"
+    depends_on:
+      - api
+
+volumes:
+  postgres_data:
+    name: retailops_postgres_data

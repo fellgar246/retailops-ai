@@ -1,0 +1,93 @@
+API_DIR := apps/api
+WEB_DIR := apps/web
+UV := uv --directory $(API_DIR)
+NPM := npm --prefix $(WEB_DIR)
+
+.DEFAULT_GOAL := help
+.PHONY: help setup env dev api web db-up db-down db-logs db-shell migrate migration \
+        test test-api test-web lint lint-api lint-web format format-check \
+        typecheck build docker-build stack-up stack-down clean
+
+help: ## Show available targets
+	@grep -hE '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) \
+		| awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-14s\033[0m %s\n", $$1, $$2}'
+
+env: ## Create .env from .env.example when missing
+	@[ -f .env ] || (cp .env.example .env && echo "Created .env from .env.example")
+
+setup: env ## Install backend and frontend dependencies
+	cd $(API_DIR) && uv sync --all-groups
+	$(NPM) install
+
+dev: ## Run API and web together (Ctrl-C stops both)
+	@$(MAKE) -j2 api web
+
+api: ## Run the FastAPI dev server on :8000
+	cd $(API_DIR) && uv run uvicorn retailops_api.main:app --reload --host 0.0.0.0 --port 8000
+
+web: ## Run the Next.js dev server on :3000
+	$(NPM) run dev
+
+db-up: env ## Start PostgreSQL and wait until healthy
+	docker compose up -d --wait postgres
+
+db-down: ## Stop PostgreSQL (keeps the data volume)
+	docker compose down
+
+db-logs: ## Tail PostgreSQL logs
+	docker compose logs -f postgres
+
+db-shell: ## Open psql inside the PostgreSQL container
+	docker compose exec postgres psql -U $${POSTGRES_USER:-retailops} -d $${POSTGRES_DB:-retailops}
+
+migrate: ## Apply all pending Alembic migrations
+	cd $(API_DIR) && uv run alembic upgrade head
+
+migration: ## Create a migration: make migration m="message"
+	cd $(API_DIR) && uv run alembic revision -m "$(m)"
+
+test: test-api test-web ## Run all tests
+
+test-api: ## Run backend tests
+	cd $(API_DIR) && uv run pytest
+
+test-web: ## Run frontend tests
+	$(NPM) test
+
+lint: lint-api lint-web ## Lint everything
+
+lint-api: ## Lint the backend
+	cd $(API_DIR) && uv run ruff check .
+
+lint-web: ## Lint the frontend
+	$(NPM) run lint
+
+format: ## Format backend and frontend sources
+	cd $(API_DIR) && uv run ruff format .
+	$(NPM) run format
+
+format-check: ## Verify formatting without writing
+	cd $(API_DIR) && uv run ruff format --check .
+	$(NPM) run format:check
+
+typecheck: ## Type check backend and frontend
+	cd $(API_DIR) && uv run mypy
+	$(NPM) run typecheck
+
+build: ## Build the frontend production bundle
+	$(NPM) run build
+
+docker-build: ## Build both container images
+	docker build -t retailops-api:local $(API_DIR)
+	docker build -t retailops-web:local $(WEB_DIR)
+
+stack-up: env ## Run the full stack (db + api + web) in Docker
+	docker compose --profile full up -d --build
+
+stack-down: ## Stop the full Docker stack
+	docker compose --profile full down
+
+clean: ## Remove build artifacts, caches and installed dependencies
+	rm -rf $(WEB_DIR)/node_modules $(WEB_DIR)/.next $(WEB_DIR)/coverage
+	rm -rf $(API_DIR)/.venv $(API_DIR)/.pytest_cache $(API_DIR)/.mypy_cache $(API_DIR)/.ruff_cache
+	find . -type d -name __pycache__ -prune -exec rm -rf {} +
