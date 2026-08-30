@@ -44,6 +44,7 @@ data/raw/*
 data/processed/*
 data/synthetic/*
 data/forecasts/*
+data/documents/*
 !data/**/.gitkeep
 
 # --- Model artifacts (keep directory structure only) ---

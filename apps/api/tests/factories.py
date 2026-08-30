@@ -4,7 +4,16 @@ from decimal import Decimal
 
 from sqlalchemy.orm import Session
 
-from retailops_api.domain.models import Category, Product, Store, Supplier, SupplierProduct
+from retailops_api.domain.models import (
+    Category,
+    DocumentFinding,
+    Product,
+    Store,
+    Supplier,
+    SupplierDocument,
+    SupplierProduct,
+)
+from retailops_api.domain.models.document import DocumentStatus, DocumentType, FindingSeverity
 
 
 def make_category(
@@ -93,3 +102,53 @@ def make_supplier_product(
     session.add(link)
     session.flush()
     return link
+
+
+def make_supplier_document(
+    session: Session,
+    supplier: Supplier,
+    *,
+    filename: str = "offer.csv",
+    media_type: str = "text/csv",
+    storage_key: str = "a" * 32,
+    checksum: str = "b" * 64,
+    document_type: str = DocumentType.supplier_sheet.value,
+    status: str = DocumentStatus.received.value,
+) -> SupplierDocument:
+    document = SupplierDocument(
+        supplier_id=supplier.id,
+        filename=filename,
+        media_type=media_type,
+        storage_key=storage_key,
+        checksum=checksum,
+        document_type=document_type,
+        status=status,
+    )
+    session.add(document)
+    session.flush()
+    return document
+
+
+def make_document_finding(
+    session: Session,
+    document: SupplierDocument,
+    *,
+    code: str = "required_field",
+    field: str | None = "description",
+    row_reference: int | None = 2,
+    severity: str = FindingSeverity.error.value,
+    message: str = "description is required",
+    proposed_value: str | None = None,
+) -> DocumentFinding:
+    finding = DocumentFinding(
+        document_id=document.id,
+        code=code,
+        field=field,
+        row_reference=row_reference,
+        severity=severity,
+        message=message,
+        proposed_value=proposed_value,
+    )
+    session.add(finding)
+    session.flush()
+    return finding

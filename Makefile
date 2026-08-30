@@ -5,9 +5,9 @@ NPM := npm --prefix $(WEB_DIR)
 
 .DEFAULT_GOAL := help
 .PHONY: help setup env dev api web db-up db-down db-logs db-shell migrate migration \
-        autogenerate db-reset seed synthetic forecast train test test-api test-web \
-        lint lint-api lint-web format format-check typecheck build docker-build \
-        stack-up stack-down clean
+        autogenerate db-reset seed synthetic forecast train documents test test-api \
+        test-web lint lint-api lint-web format format-check typecheck build \
+        docker-build stack-up stack-down clean
 
 help: ## Show available targets
 	@grep -hE '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) \
@@ -65,6 +65,9 @@ forecast: ## Walk-forward the demand baselines and write the benchmark
 
 train: ## Train the demand model, evaluate it and register a local candidate
 	cd $(API_DIR) && uv run retailops-train --output "$(CURDIR)/data/forecasts" --registry "$(CURDIR)/artifacts/models"
+
+documents: ## Ingest a supplier sheet: make documents file=path supplier=SUP-BEVCO
+	cd $(API_DIR) && uv run retailops-documents --file "$(file)" --supplier "$(supplier)" --storage "$(CURDIR)/data/documents"
 
 test: test-api test-web ## Run all tests
 

@@ -23,11 +23,13 @@ BOOTSTRAP_REVISION = "6424a6340d6e"
 
 DOMAIN_TABLES = {
     "categories",
+    "document_findings",
     "forecast_predictions",
     "forecast_runs",
     "products",
     "sales_records",
     "stores",
+    "supplier_documents",
     "supplier_products",
     "suppliers",
 }
@@ -146,6 +148,11 @@ def test_every_table_has_its_primary_key(migrated: URL, table_name: str) -> None
                 "ix_forecast_predictions_period_start",
             },
         ),
+        (
+            "supplier_documents",
+            {"ix_supplier_documents_status", "ix_supplier_documents_supplier_id"},
+        ),
+        ("document_findings", {"ix_document_findings_document_id"}),
     ],
 )
 def test_expected_indexes_exist(migrated: URL, table_name: str, expected: set[str]) -> None:
@@ -162,6 +169,8 @@ def test_expected_indexes_exist(migrated: URL, table_name: str, expected: set[st
         ("sales_records", {("store_id",): "stores", ("product_id",): "products"}),
         ("supplier_products", {("supplier_id",): "suppliers", ("product_id",): "products"}),
         ("forecast_predictions", {("forecast_run_id",): "forecast_runs"}),
+        ("supplier_documents", {("supplier_id",): "suppliers"}),
+        ("document_findings", {("document_id",): "supplier_documents"}),
     ],
 )
 def test_foreign_keys_point_where_they_should(
@@ -190,6 +199,20 @@ def test_forecast_predictions_are_removed_with_their_run(migrated: URL) -> None:
     assert foreign_keys[0]["options"].get("ondelete") == "CASCADE"
 
 
+def test_document_findings_are_removed_with_their_document(migrated: URL) -> None:
+    """A document owns its findings; they have no meaning once the file record is gone."""
+    foreign_keys = _inspector(migrated).get_foreign_keys("document_findings")
+
+    assert len(foreign_keys) == 1
+    assert foreign_keys[0]["options"].get("ondelete") == "CASCADE"
+
+
+def test_supplier_documents_restrict_supplier_deletes(migrated: URL) -> None:
+    """A stored file keeps its supplier row; retirement is deactivation."""
+    for fk in _inspector(migrated).get_foreign_keys("supplier_documents"):
+        assert fk["options"].get("ondelete") == "RESTRICT", fk["name"]
+
+
 @pytest.mark.parametrize(
     ("table_name", "expected"),
     [
@@ -203,6 +226,7 @@ def test_forecast_predictions_are_removed_with_their_run(migrated: URL) -> None:
             "forecast_predictions",
             {"uq_forecast_predictions_run_entity_week"},
         ),
+        ("supplier_documents", {"uq_supplier_documents_storage_key"}),
     ],
 )
 def test_unique_constraints_exist(migrated: URL, table_name: str, expected: set[str]) -> None:
@@ -244,6 +268,14 @@ def test_unique_constraints_exist(migrated: URL, table_name: str, expected: set[
                 "ck_forecast_predictions_actual_non_negative",
             },
         ),
+        (
+            "supplier_documents",
+            {
+                "ck_supplier_documents_document_type_known",
+                "ck_supplier_documents_status_known",
+            },
+        ),
+        ("document_findings", {"ck_document_findings_severity_known"}),
     ],
 )
 def test_check_constraints_exist(migrated: URL, table_name: str, expected: set[str]) -> None:

@@ -13,16 +13,23 @@ from retailops_api.domain.models import Base
 
 EXPECTED_TABLES = {
     "categories",
+    "document_findings",
     "forecast_predictions",
     "forecast_runs",
     "products",
     "sales_records",
     "stores",
+    "supplier_documents",
     "supplier_products",
     "suppliers",
 }
 
-IMMUTABLE_FACT_TABLES = {"forecast_predictions", "forecast_runs", "sales_records"}
+IMMUTABLE_FACT_TABLES = {
+    "document_findings",
+    "forecast_predictions",
+    "forecast_runs",
+    "sales_records",
+}
 
 API_ROOT = Path(__file__).resolve().parents[1]
 

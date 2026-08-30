@@ -31,6 +31,9 @@ class Settings(BaseSettings):
         default_factory=lambda: ["http://localhost:3000"]
     )
 
+    # Empty means the CLI uses <repo>/data/documents. Set this to pin a root.
+    document_storage_root: str = ""
+
     @field_validator("cors_origins", mode="before")
     @classmethod
     def _split_origins(cls, value: object) -> object:

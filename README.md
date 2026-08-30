@@ -6,8 +6,9 @@ Retail operations intelligence platform. This repository currently contains:
 - **The core retail domain** — the product catalog (categories, products, suppliers, supplier terms, stores) and the daily sales-history model, with migrations, data-access helpers, development seed data and a deterministic synthetic history generator.
 - **Forecast evaluation** — a weekly category-demand frame, time-based splits, naive / seasonal-naive / moving-average baselines, walk-forward backtesting, and persisted forecast runs.
 - **ML forecasting** — calendar, lag and rolling features, a histogram gradient-boosted demand model, champion/challenger promotion, and a local filesystem model registry.
+- **Supplier document intake** — store a CSV, XLSX or text PDF locally, parse it onto a canonical offer sheet, run deterministic validation against the catalog, and persist findings.
 
-Document intelligence and AWS deployment are not implemented yet.
+AI review, hosted object storage, document-analysis APIs and AWS deployment are not implemented yet.
 
 ## Prerequisites
 
@@ -38,6 +39,7 @@ Configuration lives in environment variables. `make setup` copies
 | `DATABASE_URL`             | SQLAlchemy/Alembic connection string         |
 | `CORS_ORIGINS`             | Comma-separated origins allowed by the API   |
 | `NEXT_PUBLIC_API_BASE_URL` | API base URL used by the browser             |
+| `DOCUMENT_STORAGE_ROOT`    | Local root for stored supplier files (optional; default `data/documents`) |
 
 PostgreSQL is published on host port **5435** by default so it never collides
 with a locally installed PostgreSQL. Change `POSTGRES_PORT` if you prefer 5432.
@@ -52,7 +54,7 @@ retailops/
 ├── ml/               Optional notebooks (training lives in the API package)
 ├── artifacts/        Local model registry versions (git-ignored)
 ├── infra/            Terraform modules and environments (not yet implemented)
-├── data/             Local raw/processed/synthetic data (git-ignored)
+├── data/             Local raw/processed/synthetic/document data (git-ignored)
 ├── docs/             Architecture notes and ADRs
 ├── scripts/          Developer scripts
 ├── docker-compose.yml
@@ -69,6 +71,7 @@ make seed       # load development reference data (safe to re-run)
 make synthetic  # generate, validate and ingest a year of synthetic sales
 make forecast   # walk-forward the demand baselines and write the benchmark
 make train      # train the demand model, evaluate it and register a local candidate
+make documents file=apps/api/tests/fixtures/supplier_documents/valid.csv supplier=SUP-BEVCO
 make dev        # run API (:8000) and web (:3000) together
 ```
 
@@ -119,6 +122,7 @@ make seed                        # load reference data (idempotent)
 make synthetic                   # regenerate and ingest synthetic history
 make forecast                    # walk-forward baselines; writes data/forecasts/
 make train                       # train the demand model; writes data/forecasts/ and artifacts/models/
+make documents file=… supplier=… # store, parse and validate a supplier sheet
 make db-reset                    # rebuild the schema from scratch and re-seed
 ```
 
@@ -140,6 +144,8 @@ modelling rationale in [ADR-002](docs/adr/ADR-002-core-retail-domain-model.md).
 | SalesRecord | `sales_records` | One row per store, product and trading day |
 | ForecastRun | `forecast_runs` | One baseline forecast at one origin (model, cutoff, horizon) |
 | ForecastPrediction | `forecast_predictions` | One predicted week per store and category, with actual when known |
+| SupplierDocument | `supplier_documents` | A stored supplier file (key, checksum, type, status) |
+| DocumentFinding | `document_findings` | One deterministic observation about that file |
 
 `make seed` loads a deterministic development catalog. It is idempotent, so
 running it repeatedly neither duplicates nor disturbs existing rows.
@@ -211,6 +217,18 @@ the same calls map onto SageMaker Model Registry (`CreateModelPackage`,
 endpoint loads). Details are in
 [the ML forecasting note](docs/architecture/ml-forecasting.md).
 
+## Supplier document intake
+
+`make documents` stores the file under `data/documents/` (generated keys, no
+path traversal), writes a `supplier_documents` row, parses CSV / XLSX / a
+text-based PDF onto a canonical offer sheet, and runs deterministic rules:
+required fields, EAN shape, cost and quantity bounds, configured VAT rates,
+in-file duplicates, then catalog cross-checks (supplier SKU mapped elsewhere,
+EAN already on a product, cost increase vs current term, category mismatch).
+Findings are persisted; the document ends `review_ready` or `parse_failed`.
+Storage is a contract — the local directory is one implementation. Details
+are in [the intake note](docs/architecture/supplier-document-intake.md).
+
 ## Docker
 
 ```bash
@@ -237,6 +255,7 @@ PostgreSQL by default; the `full` profile adds the API and web services.
 - [ADR-003 — Synthetic Retail Dataset and Ingestion](docs/adr/ADR-003-synthetic-data-and-ingestion.md)
 - [ADR-004 — Forecast Evaluation and Baselines](docs/adr/ADR-004-forecast-evaluation.md)
 - [ADR-005 — ML Forecasting and Local Model Registry](docs/adr/ADR-005-ml-forecasting-and-model-registry.md)
+- [ADR-006 — Supplier Document Intake and Deterministic Validation](docs/adr/ADR-006-supplier-document-intake.md)
 
 ## Security baseline
 
