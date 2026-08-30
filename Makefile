@@ -6,6 +6,7 @@ NPM := npm --prefix $(WEB_DIR)
 .DEFAULT_GOAL := help
 .PHONY: help setup env dev api web db-up db-down db-logs db-shell migrate migration \
         autogenerate db-reset seed synthetic forecast train documents reconcile \
+        review-eval \
         test test-api test-web lint lint-api lint-web format format-check typecheck \
         build docker-build stack-up stack-down clean
 
@@ -71,6 +72,9 @@ documents: ## Ingest a supplier sheet: make documents file=path supplier=SUP-BEV
 
 reconcile: ## Three-way match: make reconcile supplier=SUP-BEVCO invoice=INV-1001
 	cd $(API_DIR) && uv run retailops-reconcile --supplier "$(supplier)" $(if $(invoice),--invoice "$(invoice)") $(if $(po),--po "$(po)")
+
+review-eval: ## Score the mock reviewer on the versioned evaluation cases
+	cd $(API_DIR) && uv run retailops-review-eval --output "$(CURDIR)/data/reviews"
 
 test: test-api test-web ## Run all tests
 

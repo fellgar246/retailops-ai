@@ -8,8 +8,9 @@ Retail operations intelligence platform. This repository currently contains:
 - **ML forecasting** — calendar, lag and rolling features, a histogram gradient-boosted demand model, champion/challenger promotion, and a local filesystem model registry.
 - **Supplier document intake** — store a CSV, XLSX or text PDF locally, parse it onto a canonical offer sheet, run deterministic validation against the catalog, and persist findings.
 - **Procurement and reconciliation** — persist purchase orders, goods receipts and supplier invoices, then run a deterministic three-way match with explicit tolerances.
+- **AI review contracts** — a provider-neutral reviewer, structured and validated outputs, a fixture mock, conservative routing to human review, and a versioned evaluation harness.
 
-AI review, hosted object storage, document-analysis APIs and AWS deployment are not implemented yet.
+Hosted object storage, document-analysis APIs, a Bedrock adapter and AWS deployment are not implemented yet.
 
 ## Prerequisites
 
@@ -55,7 +56,7 @@ retailops/
 ├── ml/               Optional notebooks (training lives in the API package)
 ├── artifacts/        Local model registry versions (git-ignored)
 ├── infra/            Terraform modules and environments (not yet implemented)
-├── data/             Local raw/processed/synthetic/document data (git-ignored)
+├── data/             Local raw/processed/synthetic/document/review data (git-ignored)
 ├── docs/             Architecture notes and ADRs
 ├── scripts/          Developer scripts
 ├── docker-compose.yml
@@ -74,6 +75,7 @@ make forecast   # walk-forward the demand baselines and write the benchmark
 make train      # train the demand model, evaluate it and register a local candidate
 make documents file=apps/api/tests/fixtures/supplier_documents/valid.csv supplier=SUP-BEVCO
 make reconcile supplier=SUP-BEVCO invoice=INV-1001
+make review-eval # score the mock reviewer; writes data/reviews/
 make dev        # run API (:8000) and web (:3000) together
 ```
 
@@ -126,6 +128,7 @@ make forecast                    # walk-forward baselines; writes data/forecasts
 make train                       # train the demand model; writes data/forecasts/ and artifacts/models/
 make documents file=… supplier=… # store, parse and validate a supplier sheet
 make reconcile supplier=… invoice=…  # three-way match an invoice (or po=…)
+make review-eval                 # score the mock reviewer; writes data/reviews/
 make db-reset                    # rebuild the schema from scratch and re-seed
 ```
 
@@ -250,6 +253,35 @@ versioned run plus exceptions. Tolerances default to zero. Re-running the
 same documents and tolerances returns the existing run. Details are in
 [the procurement note](docs/architecture/procurement-reconciliation.md).
 
+## AI review
+
+Reviewers implement one method: `review(request) → ReviewResult`. Inputs are
+domain DTOs (supplier findings, reconciliation exceptions). Outputs are
+validated: review type, summary, findings, suggested value, reasoning,
+confidence, risk, recommended action, provider metadata and prompt version.
+Malformed output is rejected and must not be used.
+
+The local implementation is `MockAIReviewer`, a fixture double for normal,
+low-confidence, malformed and provider-failure behaviour. It does not
+emulate a model. A hosted adapter can implement the same contract and be
+scored on the same cases.
+
+AI may classify uncertain category text, summarize findings, explain a
+reconciliation exception, suggest a next action and assign confidence. It
+may not do financial arithmetic, mutate source records, bypass validation
+or auto-resolve high-risk cases. Amounts stay on the reconciliation run.
+Deterministic findings stay the factual source of truth.
+
+Routing defaults to human review. Auto-eligibility needs a valid result,
+confidence ≥ 0.85, low risk, a zero financial impact and an `accept` or
+`no_action` recommendation.
+
+`make review-eval` runs the mock against the versioned JSONL cases and
+writes `data/reviews/evaluation.json` and `evaluation.md`. Metrics:
+schema validity, classification accuracy, recommended-action accuracy,
+confidence presence and provider failure rate. Details are in
+[the AI review note](docs/architecture/ai-review.md).
+
 ## Docker
 
 ```bash
@@ -278,6 +310,7 @@ PostgreSQL by default; the `full` profile adds the API and web services.
 - [ADR-005 — ML Forecasting and Local Model Registry](docs/adr/ADR-005-ml-forecasting-and-model-registry.md)
 - [ADR-006 — Supplier Document Intake and Deterministic Validation](docs/adr/ADR-006-supplier-document-intake.md)
 - [ADR-007 — Procurement Documents and Deterministic Reconciliation](docs/adr/ADR-007-procurement-reconciliation.md)
+- [ADR-008 — AI Review Contracts, Mock Provider and Evaluation](docs/adr/ADR-008-ai-review-contracts.md)
 
 ## Security baseline
 

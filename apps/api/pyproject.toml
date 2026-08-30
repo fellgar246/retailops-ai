@@ -26,6 +26,7 @@ retailops-forecast = "retailops_api.forecasting.cli:main"
 retailops-train = "retailops_api.forecasting.train_cli:main"
 retailops-documents = "retailops_api.documents.cli:main"
 retailops-reconcile = "retailops_api.procurement.cli:main"
+retailops-review-eval = "retailops_api.review.cli:main"
 
 [dependency-groups]
 dev = [
@@ -42,6 +43,9 @@ build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/retailops_api"]
+
+[tool.hatch.build.targets.wheel.force-include]
+"src/retailops_api/review/datasets" = "retailops_api/review/datasets"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
