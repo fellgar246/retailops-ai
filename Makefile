@@ -5,8 +5,8 @@ NPM := npm --prefix $(WEB_DIR)
 
 .DEFAULT_GOAL := help
 .PHONY: help setup env dev api web db-up db-down db-logs db-shell migrate migration \
-        test test-api test-web lint lint-api lint-web format format-check \
-        typecheck build docker-build stack-up stack-down clean
+        autogenerate db-reset seed test test-api test-web lint lint-api lint-web \
+        format format-check typecheck build docker-build stack-up stack-down clean
 
 help: ## Show available targets
 	@grep -hE '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) \
@@ -45,6 +45,16 @@ migrate: ## Apply all pending Alembic migrations
 
 migration: ## Create a migration: make migration m="message"
 	cd $(API_DIR) && uv run alembic revision -m "$(m)"
+
+autogenerate: ## Autogenerate a migration from the models: make autogenerate m="message"
+	cd $(API_DIR) && uv run alembic revision --autogenerate -m "$(m)"
+
+db-reset: ## Drop the schema, re-apply every migration and re-seed
+	cd $(API_DIR) && uv run alembic downgrade base && uv run alembic upgrade head
+	@$(MAKE) seed
+
+seed: ## Load deterministic development reference data (idempotent)
+	cd $(API_DIR) && uv run retailops-seed
 
 test: test-api test-web ## Run all tests
 

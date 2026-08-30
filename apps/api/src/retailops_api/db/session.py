@@ -2,13 +2,9 @@ from collections.abc import Iterator
 from functools import lru_cache
 
 from sqlalchemy import Engine, create_engine, text
-from sqlalchemy.orm import DeclarativeBase, Session, sessionmaker
+from sqlalchemy.orm import Session, sessionmaker
 
 from retailops_api.core.config import get_settings
-
-
-class Base(DeclarativeBase):
-    """Declarative base for future domain models."""
 
 
 @lru_cache

@@ -1,0 +1,95 @@
+"""The shared persistence conventions the whole schema relies on."""
+
+from pathlib import Path
+
+import pytest
+from alembic.config import Config
+from alembic.script import ScriptDirectory
+from sqlalchemy import DateTime, Table
+
+from retailops_api.db.base import NAMING_CONVENTION
+from retailops_api.domain.models import Base
+
+EXPECTED_TABLES = {
+    "categories",
+    "products",
+    "sales_records",
+    "stores",
+    "supplier_products",
+    "suppliers",
+}
+
+API_ROOT = Path(__file__).resolve().parents[1]
+
+
+def test_metadata_registers_every_domain_table() -> None:
+    assert set(Base.metadata.tables) == EXPECTED_TABLES
+
+
+def test_metadata_uses_the_shared_naming_convention() -> None:
+    assert dict(Base.metadata.naming_convention) == NAMING_CONVENTION
+
+
+@pytest.mark.parametrize("table_name", sorted(EXPECTED_TABLES))
+def test_primary_key_follows_the_convention(table_name: str) -> None:
+    table = Base.metadata.tables[table_name]
+    assert table.primary_key.name == f"pk_{table_name}"
+    assert [column.name for column in table.primary_key.columns] == ["id"]
+
+
+@pytest.mark.parametrize("table_name", sorted(EXPECTED_TABLES))
+def test_constraint_and_index_names_are_prefixed(table_name: str) -> None:
+    table: Table = Base.metadata.tables[table_name]
+    prefixes = {
+        "PrimaryKeyConstraint": "pk_",
+        "ForeignKeyConstraint": "fk_",
+        "UniqueConstraint": "uq_",
+        "CheckConstraint": "ck_",
+    }
+    for constraint in table.constraints:
+        prefix = prefixes[type(constraint).__name__]
+        assert str(constraint.name).startswith(prefix), constraint.name
+
+    for index in table.indexes:
+        assert str(index.name).startswith("ix_"), index.name
+
+
+@pytest.mark.parametrize("table_name", sorted(EXPECTED_TABLES))
+def test_every_table_records_when_a_row_was_created(table_name: str) -> None:
+    assert "created_at" in Base.metadata.tables[table_name].columns
+
+
+@pytest.mark.parametrize("table_name", sorted(EXPECTED_TABLES - {"sales_records"}))
+def test_mutable_tables_track_updates_and_lifecycle(table_name: str) -> None:
+    columns = Base.metadata.tables[table_name].columns
+    assert "updated_at" in columns
+    assert "active" in columns
+
+
+def test_sales_records_are_immutable_facts() -> None:
+    """ADR-002: a correction re-ingests the natural key instead of editing a row."""
+    columns = Base.metadata.tables["sales_records"].columns
+    assert "updated_at" not in columns
+    assert "active" not in columns
+
+
+def test_timestamps_are_timezone_aware() -> None:
+    for table in Base.metadata.tables.values():
+        for name in ("created_at", "updated_at"):
+            if name not in table.columns:
+                continue
+            column_type = table.columns[name].type
+            assert isinstance(column_type, DateTime), f"{table.name}.{name}"
+            assert column_type.timezone is True, f"{table.name}.{name}"
+
+
+def test_alembic_discovers_the_domain_metadata() -> None:
+    """The migration environment must see exactly the tables the app defines."""
+    config = Config(str(API_ROOT / "alembic.ini"))
+    script = ScriptDirectory.from_config(config)
+
+    heads = script.get_heads()
+    assert len(heads) == 1, f"expected a single migration head, found {heads}"
+
+    revisions = [revision.revision for revision in script.walk_revisions()]
+    assert len(revisions) == len(set(revisions))

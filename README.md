@@ -1,9 +1,11 @@
 # RetailOps AI
 
-Retail operations intelligence platform. This repository currently contains the
-**Block 0** engineering foundation: a FastAPI backend, a Next.js frontend, a
-local PostgreSQL database and the tooling needed to develop, test and containerize
-them. No retail domain functionality is implemented yet.
+Retail operations intelligence platform. This repository currently contains:
+
+- **The engineering foundation** — a FastAPI backend, a Next.js frontend, a local PostgreSQL database and the tooling needed to develop, test and containerize them.
+- **The core retail domain** — the product catalog (categories, products, suppliers, supplier terms, stores) and the daily sales-history model, with migrations, data-access helpers and development seed data.
+
+Forecasting, document intelligence and AWS deployment are not implemented yet.
 
 ## Prerequisites
 
@@ -45,8 +47,8 @@ retailops/
 ├── apps/
 │   ├── api/          FastAPI backend (src layout, tests, Alembic migrations)
 │   └── web/          Next.js frontend (App Router, TypeScript, Vitest)
-├── ml/               Forecasting code and notebooks (later blocks)
-├── infra/            Terraform modules and environments (later blocks)
+├── ml/               Forecasting code and notebooks (not yet implemented)
+├── infra/            Terraform modules and environments (not yet implemented)
 ├── data/             Local raw/processed/synthetic data (git-ignored)
 ├── docs/             Architecture notes and ADRs
 ├── scripts/          Developer scripts
@@ -60,6 +62,7 @@ retailops/
 ```bash
 make db-up      # start PostgreSQL and wait until healthy
 make migrate    # apply Alembic migrations
+make seed       # load development reference data (safe to re-run)
 make dev        # run API (:8000) and web (:3000) together
 ```
 
@@ -80,6 +83,12 @@ make test-api
 make test-web
 ```
 
+Most backend tests run against in-memory SQLite and need nothing running. The
+PostgreSQL integration tests — migrations, exact numeric scale, timezone-aware
+timestamps — create and drop their own throwaway databases on the configured
+server, so `make db-up` first to include them. They skip automatically when
+PostgreSQL is unreachable, or when `RETAILOPS_SKIP_POSTGRES_TESTS` is set.
+
 ## Linting, formatting and types
 
 ```bash
@@ -98,10 +107,31 @@ make db-down                     # stop it, keeping the data volume
 make db-logs                     # tail logs
 make db-shell                    # psql session inside the container
 make migrate                     # alembic upgrade head
-make migration m="add products"  # create a new revision
+make migration m="add products"  # create an empty revision
+make autogenerate m="add x"      # create a revision from model changes
+make seed                        # load reference data (idempotent)
+make db-reset                    # rebuild the schema from scratch and re-seed
 ```
 
 Data lives in the named volume `retailops_postgres_data` and survives restarts.
+
+## Retail domain model
+
+The catalog and sales schema is documented in
+[the ER model note](docs/architecture/retail-domain-er-model.md), with the
+modelling rationale in [ADR-002](docs/adr/ADR-002-core-retail-domain-model.md).
+
+| Entity | Table | Purpose |
+| ------ | ----- | ------- |
+| Category | `categories` | Merchandise hierarchy (self-referencing tree) |
+| Product | `products` | Sellable items, identified by SKU |
+| Supplier | `suppliers` | Vendors the business buys from |
+| SupplierProduct | `supplier_products` | Cost, case pack, minimum order and lead time per supplier/product pairing |
+| Store | `stores` | Selling locations, grouped by region and type |
+| SalesRecord | `sales_records` | One row per store, product and trading day |
+
+`make seed` loads a deterministic development catalog. It is idempotent, so
+running it repeatedly neither duplicates nor disturbs existing rows.
 
 ## Docker
 
@@ -125,6 +155,7 @@ PostgreSQL by default; the `full` profile adds the API and web services.
 ## Architecture decisions
 
 - [ADR-001 — Monorepo and Local-First Development Strategy](docs/adr/ADR-001-monorepo-and-local-first-development.md)
+- [ADR-002 — Core Retail Domain Model and Persistence Conventions](docs/adr/ADR-002-core-retail-domain-model.md)
 
 ## Security baseline
 

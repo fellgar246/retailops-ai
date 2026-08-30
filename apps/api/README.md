@@ -8,6 +8,8 @@ uv run uvicorn retailops_api.main:app --reload   # start on :8000
 uv run pytest            # tests
 uv run ruff check .      # lint
 uv run mypy              # type check
+uv run alembic upgrade head   # apply migrations
+uv run retailops-seed         # load development reference data (idempotent)
 ```
 
 Endpoints:
@@ -15,3 +17,16 @@ Endpoints:
 - `GET /health` — liveness, returns `{"status": "ok"}`
 - `GET /health/db` — database connectivity
 - `GET /docs` — interactive API documentation
+
+Layout:
+
+- `src/retailops_api/db/` — declarative base, naming conventions, session factory, seed data
+- `src/retailops_api/domain/` — retail models and data-access helpers
+- `migrations/` — Alembic revisions
+
+The retail schema is documented in
+[`docs/architecture/retail-domain-er-model.md`](../../docs/architecture/retail-domain-er-model.md).
+
+Tests default to in-memory SQLite. PostgreSQL integration tests create their own
+throwaway databases and skip when the server is unreachable; set
+`RETAILOPS_SKIP_POSTGRES_TESTS=1` to skip them explicitly.

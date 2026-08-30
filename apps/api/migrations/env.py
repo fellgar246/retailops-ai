@@ -4,14 +4,20 @@ from alembic import context
 from sqlalchemy import engine_from_config, pool
 
 from retailops_api.core.config import get_settings
-from retailops_api.db.session import Base
+
+# Importing the model package registers every table on `Base.metadata`, which is
+# what autogenerate compares against the live database.
+from retailops_api.domain.models import Base
 
 config = context.config
 
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
-config.set_main_option("sqlalchemy.url", get_settings().database_url)
+# A caller may pin the target database -- tests do this to migrate a scratch
+# database -- so only fall back to application settings when it has not.
+if not config.get_main_option("sqlalchemy.url", None):
+    config.set_main_option("sqlalchemy.url", get_settings().database_url)
 
 target_metadata = Base.metadata
 
