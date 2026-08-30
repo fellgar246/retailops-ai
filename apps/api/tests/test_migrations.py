@@ -33,6 +33,10 @@ DOMAIN_TABLES = {
     "purchase_orders",
     "reconciliation_exceptions",
     "reconciliation_runs",
+    "review_ai_snapshots",
+    "review_audit_events",
+    "review_cases",
+    "review_decisions",
     "sales_records",
     "stores",
     "supplier_documents",
@@ -216,6 +220,28 @@ def test_every_table_has_its_primary_key(migrated: URL, table_name: str) -> None
                 "ix_reconciliation_exceptions_resolution_status",
             },
         ),
+        (
+            "review_cases",
+            {
+                "ix_review_cases_created_at",
+                "ix_review_cases_priority",
+                "ix_review_cases_risk",
+                "ix_review_cases_status",
+                "ix_review_cases_subject_type",
+                "ix_review_cases_supplier_id",
+            },
+        ),
+        (
+            "review_decisions",
+            {"ix_review_decisions_snapshot_id"},
+        ),
+        (
+            "review_audit_events",
+            {
+                "ix_review_audit_events_event_type",
+                "ix_review_audit_events_review_case_id",
+            },
+        ),
     ],
 )
 def test_expected_indexes_exist(migrated: URL, table_name: str, expected: set[str]) -> None:
@@ -272,6 +298,23 @@ def test_expected_indexes_exist(migrated: URL, table_name: str, expected: set[st
                 ("product_id",): "products",
             },
         ),
+        (
+            "review_cases",
+            {
+                ("document_finding_id",): "document_findings",
+                ("reconciliation_exception_id",): "reconciliation_exceptions",
+                ("supplier_id",): "suppliers",
+            },
+        ),
+        ("review_ai_snapshots", {("review_case_id",): "review_cases"}),
+        (
+            "review_decisions",
+            {
+                ("review_case_id",): "review_cases",
+                ("snapshot_id",): "review_ai_snapshots",
+            },
+        ),
+        ("review_audit_events", {("review_case_id",): "review_cases"}),
     ],
 )
 def test_foreign_keys_point_where_they_should(
@@ -345,6 +388,29 @@ def test_reconciliation_exceptions_are_removed_with_their_run(migrated: URL) -> 
     assert run_fk["options"].get("ondelete") == "CASCADE"
 
 
+def test_review_history_is_removed_with_its_case(migrated: URL) -> None:
+    """Snapshots, decisions and audit events belong to the case."""
+    for table_name, column in (
+        ("review_ai_snapshots", "review_case_id"),
+        ("review_decisions", "review_case_id"),
+        ("review_audit_events", "review_case_id"),
+    ):
+        foreign_keys = _inspector(migrated).get_foreign_keys(table_name)
+        case_fk = next(fk for fk in foreign_keys if fk["constrained_columns"] == [column])
+        assert case_fk["options"].get("ondelete") == "CASCADE"
+
+
+def test_review_cases_restrict_subject_deletes(migrated: URL) -> None:
+    """A reviewed finding or exception cannot disappear from under the case."""
+    foreign_keys = {
+        tuple(fk["constrained_columns"]): fk["options"].get("ondelete")
+        for fk in _inspector(migrated).get_foreign_keys("review_cases")
+    }
+    assert foreign_keys[("document_finding_id",)] == "RESTRICT"
+    assert foreign_keys[("reconciliation_exception_id",)] == "RESTRICT"
+    assert foreign_keys[("supplier_id",)] == "RESTRICT"
+
+
 @pytest.mark.parametrize(
     ("table_name", "expected"),
     [
@@ -369,6 +435,15 @@ def test_reconciliation_exceptions_are_removed_with_their_run(migrated: URL) -> 
             {"uq_supplier_invoice_lines_supplier_invoice_id_line_number"},
         ),
         ("reconciliation_runs", {"uq_reconciliation_runs_scope_key_version"}),
+        (
+            "review_cases",
+            {
+                "uq_review_cases_document_finding_id",
+                "uq_review_cases_reconciliation_exception_id",
+            },
+        ),
+        ("review_ai_snapshots", {"uq_review_ai_snapshots_review_case_id"}),
+        ("review_decisions", {"uq_review_decisions_review_case_id"}),
     ],
 )
 def test_unique_constraints_exist(migrated: URL, table_name: str, expected: set[str]) -> None:
@@ -464,6 +539,27 @@ def test_unique_constraints_exist(migrated: URL, table_name: str, expected: set[
                 "ck_reconciliation_exceptions_resolution_known",
             },
         ),
+        (
+            "review_cases",
+            {
+                "ck_review_cases_status_known",
+                "ck_review_cases_priority_known",
+                "ck_review_cases_subject_type_known",
+                "ck_review_cases_risk_known",
+                "ck_review_cases_subject_matches_type",
+                "ck_review_cases_confidence_unit_interval",
+            },
+        ),
+        ("review_ai_snapshots", {"ck_review_ai_snapshots_confidence_unit_interval"}),
+        (
+            "review_decisions",
+            {
+                "ck_review_decisions_decision_known",
+                "ck_review_decisions_reject_requires_reason",
+                "ck_review_decisions_correct_requires_payload",
+            },
+        ),
+        ("review_audit_events", {"ck_review_audit_events_event_type_known"}),
     ],
 )
 def test_check_constraints_exist(migrated: URL, table_name: str, expected: set[str]) -> None:

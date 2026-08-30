@@ -6,7 +6,7 @@ NPM := npm --prefix $(WEB_DIR)
 .DEFAULT_GOAL := help
 .PHONY: help setup env dev api web db-up db-down db-logs db-shell migrate migration \
         autogenerate db-reset seed synthetic forecast train documents reconcile \
-        review-eval \
+        review-eval reviews review-feedback \
         test test-api test-web lint lint-api lint-web format format-check typecheck \
         build docker-build stack-up stack-down clean
 
@@ -75,6 +75,12 @@ reconcile: ## Three-way match: make reconcile supplier=SUP-BEVCO invoice=INV-100
 
 review-eval: ## Score the mock reviewer on the versioned evaluation cases
 	cd $(API_DIR) && uv run retailops-review-eval --output "$(CURDIR)/data/reviews"
+
+reviews: ## List the human review queue
+	cd $(API_DIR) && uv run retailops-review queue
+
+review-feedback: ## Export decided reviews as evaluation rows
+	cd $(API_DIR) && uv run retailops-review feedback --output "$(CURDIR)/data/reviews"
 
 test: test-api test-web ## Run all tests
 

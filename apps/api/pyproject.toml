@@ -27,6 +27,7 @@ retailops-train = "retailops_api.forecasting.train_cli:main"
 retailops-documents = "retailops_api.documents.cli:main"
 retailops-reconcile = "retailops_api.procurement.cli:main"
 retailops-review-eval = "retailops_api.review.cli:main"
+retailops-review = "retailops_api.review.ops_cli:main"
 
 [dependency-groups]
 dev = [

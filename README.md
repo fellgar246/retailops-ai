@@ -9,6 +9,7 @@ Retail operations intelligence platform. This repository currently contains:
 - **Supplier document intake** — store a CSV, XLSX or text PDF locally, parse it onto a canonical offer sheet, run deterministic validation against the catalog, and persist findings.
 - **Procurement and reconciliation** — persist purchase orders, goods receipts and supplier invoices, then run a deterministic three-way match with explicit tolerances.
 - **AI review contracts** — a provider-neutral reviewer, structured and validated outputs, a fixture mock, conservative routing to human review, and a versioned evaluation harness.
+- **Human review** — persisted cases on document findings and reconciliation exceptions, an immutable AI snapshot, controlled decisions, an append-only audit log, a feedback export and a metrics API.
 
 Hosted object storage, document-analysis APIs, a Bedrock adapter and AWS deployment are not implemented yet.
 
@@ -76,6 +77,8 @@ make train      # train the demand model, evaluate it and register a local candi
 make documents file=apps/api/tests/fixtures/supplier_documents/valid.csv supplier=SUP-BEVCO
 make reconcile supplier=SUP-BEVCO invoice=INV-1001
 make review-eval # score the mock reviewer; writes data/reviews/
+make reviews     # list the human review queue
+make review-feedback # export decided reviews for evaluation
 make dev        # run API (:8000) and web (:3000) together
 ```
 
@@ -129,6 +132,8 @@ make train                       # train the demand model; writes data/forecasts
 make documents file=… supplier=… # store, parse and validate a supplier sheet
 make reconcile supplier=… invoice=…  # three-way match an invoice (or po=…)
 make review-eval                 # score the mock reviewer; writes data/reviews/
+make reviews                     # list the human review queue
+make review-feedback             # export decided reviews for evaluation
 make db-reset                    # rebuild the schema from scratch and re-seed
 ```
 
@@ -160,6 +165,10 @@ modelling rationale in [ADR-002](docs/adr/ADR-002-core-retail-domain-model.md).
 | SupplierInvoiceLine | `supplier_invoice_lines` | Invoiced quantity, unit cost, tax and line total |
 | ReconciliationRun | `reconciliation_runs` | One deterministic three-way match (versioned by scope) |
 | ReconciliationException | `reconciliation_exceptions` | What does not match, with signed financial impact |
+| ReviewCase | `review_cases` | A human-oversight item on a finding or exception |
+| ReviewAISnapshot | `review_ai_snapshots` | Immutable copy of the reviewer output that opened the case |
+| ReviewDecisionRecord | `review_decisions` | The human approve / reject / correct close |
+| ReviewAuditEvent | `review_audit_events` | Append-only history of status and assignment changes |
 
 `make seed` loads a deterministic development catalog. It is idempotent, so
 running it repeatedly neither duplicates nor disturbs existing rows.
@@ -282,6 +291,33 @@ schema validity, classification accuracy, recommended-action accuracy,
 confidence presence and provider failure rate. Details are in
 [the AI review note](docs/architecture/ai-review.md).
 
+## Human review
+
+Cases persist against a document finding or a reconciliation exception.
+Each case carries priority, risk, confidence, financial impact, the
+assigned reviewer and timestamps. When a reviewer result is attached, a
+snapshot stores provider, model, prompt version, the original output,
+confidence, the recommended action and an input hash. That snapshot is
+not edited.
+
+Status moves only through documented transitions: `open` → `in_review` →
+`approved` / `rejected` / `corrected`, or `cancelled` from `open` or
+`in_review`. Starting a case that someone else already holds is rejected.
+Approve stores an optional comment and a reference to the accepted
+snapshot. Reject requires a reason. Correct stores structured human
+values next to the original AI recommendation. Every change appends an
+audit event; history is not overwritten.
+
+`GET /reviews` lists the queue (status, priority, subject type, supplier,
+risk, date, stable order, pagination). `GET /reviews/metrics` returns
+open-case count, acceptance / rejection / correction rates, and average
+review duration when both timestamps exist. `GET /reviews/feedback`
+and `make review-feedback` export decided rows for evaluation (input
+reference, AI result, confidence, decision, correction, prompt and
+model versions). Local reviewer identity is an explicit string; sign-in
+is not implemented. Details are in
+[the human review note](docs/architecture/human-review.md).
+
 ## Docker
 
 ```bash
@@ -299,6 +335,9 @@ PostgreSQL by default; the `full` profile adds the API and web services.
 | ------ | ------------ | ------------------------------- |
 | GET    | `/health`    | Liveness, returns `{"status": "ok"}` |
 | GET    | `/health/db` | Database connectivity check     |
+| GET    | `/reviews`   | Human review queue (filters + pagination) |
+| GET    | `/reviews/metrics` | Open cases, decision rates, average duration |
+| GET    | `/reviews/feedback` | Decided cases as evaluation rows |
 | GET    | `/docs`      | OpenAPI documentation           |
 
 ## Architecture decisions
@@ -311,6 +350,7 @@ PostgreSQL by default; the `full` profile adds the API and web services.
 - [ADR-006 — Supplier Document Intake and Deterministic Validation](docs/adr/ADR-006-supplier-document-intake.md)
 - [ADR-007 — Procurement Documents and Deterministic Reconciliation](docs/adr/ADR-007-procurement-reconciliation.md)
 - [ADR-008 — AI Review Contracts, Mock Provider and Evaluation](docs/adr/ADR-008-ai-review-contracts.md)
+- [ADR-009 — Human Review, Audit and Feedback](docs/adr/ADR-009-human-review-audit-feedback.md)
 
 ## Security baseline
 

@@ -1,6 +1,6 @@
 """Minimal builders so each test states only the fields it cares about."""
 
-from datetime import date
+from datetime import UTC, date, datetime
 from decimal import Decimal
 
 from sqlalchemy.orm import Session
@@ -13,6 +13,9 @@ from retailops_api.domain.models import (
     Product,
     PurchaseOrder,
     PurchaseOrderLine,
+    ReconciliationException,
+    ReconciliationRun,
+    ReviewCase,
     Store,
     Supplier,
     SupplierDocument,
@@ -23,6 +26,8 @@ from retailops_api.domain.models import (
 from retailops_api.domain.models.document import DocumentStatus, DocumentType, FindingSeverity
 from retailops_api.domain.models.goods_receipt import GoodsReceiptStatus
 from retailops_api.domain.models.purchase_order import PurchaseOrderStatus
+from retailops_api.domain.models.reconciliation import ExceptionSeverity
+from retailops_api.domain.models.review import ReviewPriority, ReviewStatus, ReviewSubjectType
 from retailops_api.domain.models.supplier_invoice import SupplierInvoiceStatus
 from retailops_api.procurement.money import line_amounts
 
@@ -333,3 +338,96 @@ def make_supplier_invoice_line(
     invoice.lines.append(line)
     session.flush()
     return line
+
+
+def make_reconciliation_run(
+    session: Session,
+    *,
+    scope_key: str = "po:SUP-BEVCO:PO-1001",
+    version: int = 1,
+) -> ReconciliationRun:
+    run = ReconciliationRun(
+        scope_key=scope_key,
+        version=version,
+        input_fingerprint="a" * 64,
+        generated_at=datetime(2026, 8, 30, 16, 0, tzinfo=UTC),
+        purchase_order_count=1,
+        goods_receipt_count=1,
+        supplier_invoice_count=1,
+        exception_count=1,
+        error_count=1,
+        warning_count=0,
+        info_count=0,
+        total_financial_impact=Decimal("14.9000"),
+        tolerances={
+            "quantity_tolerance": 0,
+            "monetary_tolerance": "0.0000",
+            "price_percent_tolerance": "0.0000",
+        },
+    )
+    session.add(run)
+    session.flush()
+    return run
+
+
+def make_reconciliation_exception(
+    session: Session,
+    run: ReconciliationRun | None = None,
+    *,
+    supplier_invoice: SupplierInvoice | None = None,
+    purchase_order: PurchaseOrder | None = None,
+    code: str = "over_invoice",
+    financial_impact: Decimal = Decimal("14.9000"),
+) -> ReconciliationException:
+    if run is None:
+        run = make_reconciliation_run(session)
+    row = ReconciliationException(
+        reconciliation_run_id=run.id,
+        code=code,
+        severity=ExceptionSeverity.error.value,
+        purchase_order_id=None if purchase_order is None else purchase_order.id,
+        supplier_invoice_id=None if supplier_invoice is None else supplier_invoice.id,
+        expected_value="10",
+        actual_value="12",
+        financial_impact=financial_impact,
+        message="invoiced 12 against 10 received",
+    )
+    session.add(row)
+    session.flush()
+    return row
+
+
+def make_review_case(
+    session: Session,
+    *,
+    finding: DocumentFinding | None = None,
+    exception: ReconciliationException | None = None,
+    supplier: Supplier | None = None,
+    status: str = ReviewStatus.open.value,
+    priority: str = ReviewPriority.medium.value,
+    risk: str = "medium",
+    financial_impact: Decimal = Decimal("0.0000"),
+) -> ReviewCase:
+    if finding is None and exception is None:
+        raise ValueError("finding or exception is required")
+    if finding is not None:
+        subject_type = ReviewSubjectType.document_finding.value
+        finding_id = finding.id
+        exception_id = None
+    else:
+        subject_type = ReviewSubjectType.reconciliation_exception.value
+        finding_id = None
+        exception_id = None if exception is None else exception.id
+    case = ReviewCase(
+        subject_type=subject_type,
+        document_finding_id=finding_id,
+        reconciliation_exception_id=exception_id,
+        supplier_id=None if supplier is None else supplier.id,
+        priority=priority,
+        risk=risk,
+        financial_impact=financial_impact,
+        status=status,
+    )
+    session.add(case)
+    session.flush()
+    return case

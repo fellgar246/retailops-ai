@@ -12,3 +12,4 @@ def test_openapi_schema_is_available(client: TestClient) -> None:
 
     assert response.status_code == 200
     assert "/health" in response.json()["paths"]
+    assert "/reviews/metrics" in response.json()["paths"]

@@ -23,6 +23,10 @@ EXPECTED_TABLES = {
     "purchase_orders",
     "reconciliation_exceptions",
     "reconciliation_runs",
+    "review_ai_snapshots",
+    "review_audit_events",
+    "review_cases",
+    "review_decisions",
     "sales_records",
     "stores",
     "supplier_documents",
@@ -37,6 +41,9 @@ IMMUTABLE_FACT_TABLES = {
     "forecast_predictions",
     "forecast_runs",
     "reconciliation_runs",
+    "review_ai_snapshots",
+    "review_audit_events",
+    "review_decisions",
     "sales_records",
 }
 

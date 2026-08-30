@@ -1,7 +1,8 @@
 """Shared enums, errors and domain DTOs for AI-assisted review.
 
-Persistence of human decisions is a separate workflow. These shapes are what
-a reviewer receives and what routing / evaluation inspect.
+These shapes are what a reviewer receives and what routing / evaluation
+inspect. Human decisions, audit events and feedback rows are persisted
+separately from this contract.
 """
 
 from __future__ import annotations

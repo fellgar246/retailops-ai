@@ -32,6 +32,17 @@ from retailops_api.domain.models.reconciliation import (
     ReconciliationException,
     ReconciliationRun,
 )
+from retailops_api.domain.models.review import (
+    ReviewAISnapshot,
+    ReviewAuditEvent,
+    ReviewCase,
+    ReviewDecision,
+    ReviewDecisionRecord,
+    ReviewEventType,
+    ReviewPriority,
+    ReviewStatus,
+    ReviewSubjectType,
+)
 from retailops_api.domain.models.sales_record import SalesRecord
 from retailops_api.domain.models.store import Store
 from retailops_api.domain.models.supplier import Supplier
@@ -62,6 +73,15 @@ __all__ = [
     "PurchaseOrderStatus",
     "ReconciliationException",
     "ReconciliationRun",
+    "ReviewAISnapshot",
+    "ReviewAuditEvent",
+    "ReviewCase",
+    "ReviewDecision",
+    "ReviewDecisionRecord",
+    "ReviewEventType",
+    "ReviewPriority",
+    "ReviewStatus",
+    "ReviewSubjectType",
     "SalesRecord",
     "Store",
     "Supplier",

@@ -16,12 +16,16 @@ uv run retailops-train        # train the demand model, evaluate it and register
 uv run retailops-documents    # store, parse and validate a supplier sheet
 uv run retailops-reconcile    # three-way match a purchase order or invoice
 uv run retailops-review-eval  # score the mock reviewer and write an evaluation report
+uv run retailops-review queue # list the human review queue
 ```
 
 Endpoints:
 
 - `GET /health` — liveness, returns `{"status": "ok"}`
 - `GET /health/db` — database connectivity
+- `GET /reviews` — human review queue
+- `GET /reviews/metrics` — open cases and decision rates
+- `GET /reviews/feedback` — decided cases as evaluation rows
 - `GET /docs` — interactive API documentation
 
 Layout:
@@ -34,7 +38,7 @@ Layout:
 - `src/retailops_api/forecasting/` — weekly demand frame, features, baselines, histogram-GBM training, local model registry
 - `src/retailops_api/documents/` — supplier-sheet intake, local storage, parsers and deterministic rules
 - `src/retailops_api/procurement/` — purchase orders, receipts, invoices and deterministic three-way match
-- `src/retailops_api/review/` — reviewer contract, structured results, mock provider, routing and evaluation
+- `src/retailops_api/review/` — reviewer contract, structured results, mock provider, routing, evaluation, human-review cases and metrics
 - `migrations/` — Alembic revisions
 
 The retail schema is documented in
