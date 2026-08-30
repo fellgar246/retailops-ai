@@ -48,6 +48,9 @@ data/synthetic/*
 # --- Notebooks ---
 .ipynb_checkpoints/
 
+# --- Docs ---
+docs/
+
 # --- OS / editors ---
 .DS_Store
 Thumbs.db
