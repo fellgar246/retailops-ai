@@ -10,6 +10,7 @@ from sqlalchemy.engine import URL, make_url
 from sqlalchemy.orm import Session
 from sqlalchemy.pool import StaticPool
 
+from retailops_api.api.deps import get_db
 from retailops_api.core.config import get_settings
 from retailops_api.domain.models import Base
 from retailops_api.main import create_app
@@ -30,6 +31,18 @@ def app() -> FastAPI:
 @pytest.fixture
 def client(app: FastAPI) -> TestClient:
     return TestClient(app)
+
+
+@pytest.fixture
+def api_client(app: FastAPI, session: Session) -> Iterator[TestClient]:
+    def _override() -> Iterator[Session]:
+        yield session
+        session.commit()
+
+    app.dependency_overrides[get_db] = _override
+    with TestClient(app) as test_client:
+        yield test_client
+    app.dependency_overrides.clear()
 
 
 # --------------------------------------------------------------------------- #

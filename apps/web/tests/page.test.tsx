@@ -3,20 +3,18 @@ import { describe, expect, it, vi } from 'vitest';
 
 import HomePage from '@/app/page';
 
-vi.mock('@/components/ApiHealthIndicator', () => ({
-  ApiHealthIndicator: () => <div data-testid="api-health-indicator" />,
+import { overviewFixture } from './fixtures';
+
+vi.mock('@/lib/api', () => ({
+  getOverview: vi.fn(async () => overviewFixture),
 }));
 
 describe('HomePage', () => {
-  it('identifies the application as RetailOps AI', () => {
+  it('identifies the application as RetailOps AI and shows backend metrics', async () => {
     render(<HomePage />);
 
-    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('RetailOps AI');
-  });
-
-  it('renders the API connectivity indicator', () => {
-    render(<HomePage />);
-
-    expect(screen.getByTestId('api-health-indicator')).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: 'Overview operativo' })).toBeInTheDocument();
+    expect(screen.getByText('Revisiones abiertas')).toBeInTheDocument();
+    expect(screen.getByText('4')).toBeInTheDocument();
   });
 });

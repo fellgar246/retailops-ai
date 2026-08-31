@@ -30,6 +30,7 @@ from retailops_api.review.persist import (
     load_finding,
     snapshot_for,
 )
+from retailops_api.review.present import case_payload, page_payload, subject_payload
 from retailops_api.review.queue import DEFAULT_LIMIT, MAX_LIMIT, list_cases
 from retailops_api.review.schemas import parse_review_result
 from retailops_api.review.types import ReviewSchemaError, RiskLevel
@@ -125,7 +126,7 @@ def review_queue(
         limit=limit,
         offset=offset,
     )
-    return page.to_dict()
+    return page_payload(session, page.items, page.total, page.limit, page.offset)
 
 
 @router.post("", status_code=201)
@@ -233,7 +234,8 @@ def _detail(session: Session, case_id: int) -> dict[str, Any]:
     case = get_case(session, case_id)
     snapshot = snapshot_for(case)
     decision = min(case.decisions, key=lambda item: item.id) if case.decisions else None
-    payload = case_view(case).to_dict()
+    payload = case_payload(session, case_view(case))
+    payload["subject"] = subject_payload(session, case_view(case))
     payload["snapshot"] = None
     if snapshot is not None:
         payload["snapshot"] = {

@@ -1,27 +1,10 @@
 """HTTP review queue, decisions, audit, feedback and metrics."""
 
-from collections.abc import Iterator
-
-import pytest
-from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
 
-from retailops_api.api.deps import get_db
 from retailops_api.review.workflow import start_review
 from tests.review_support import finding_case
-
-
-@pytest.fixture
-def api_client(app: FastAPI, session: Session) -> Iterator[TestClient]:
-    def _override() -> Iterator[Session]:
-        yield session
-        session.commit()
-
-    app.dependency_overrides[get_db] = _override
-    with TestClient(app) as client:
-        yield client
-    app.dependency_overrides.clear()
 
 
 def test_metrics_endpoint_starts_empty(api_client: TestClient) -> None:

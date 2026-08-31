@@ -130,13 +130,16 @@ _PLANNING_REFERENCE = re.compile(
     r"\bSpec\s+\d+\b|\bBlock\s+\d+\b|\blater\s+block\b|\bnext\s+block\b",
     re.IGNORECASE,
 )
-_SHIPPED_TEXT_SUFFIXES = {".py", ".md"}
+_SHIPPED_TEXT_SUFFIXES = {".py", ".md", ".ts", ".tsx", ".css"}
 _SHIPPED_ROOTS = (
     API_ROOT / "src",
     API_ROOT / "tests",
     API_ROOT / "README.md",
     API_ROOT.parents[1] / "README.md",
     API_ROOT.parents[1] / "Makefile",
+    API_ROOT.parents[1] / "apps" / "web" / "src",
+    API_ROOT.parents[1] / "apps" / "web" / "tests",
+    API_ROOT.parents[1] / "apps" / "web" / "README.md",
 )
 
 

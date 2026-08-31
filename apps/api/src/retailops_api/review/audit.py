@@ -47,3 +47,20 @@ def list_events(session: Session, case_id: int) -> list[ReviewAuditEvent]:
             .order_by(ReviewAuditEvent.id.asc())
         ).all()
     )
+
+
+def list_recent_events(
+    session: Session, *, limit: int, offset: int
+) -> tuple[list[ReviewAuditEvent], int]:
+    from sqlalchemy import func, select
+
+    total = session.scalar(select(func.count()).select_from(ReviewAuditEvent)) or 0
+    events = list(
+        session.scalars(
+            select(ReviewAuditEvent)
+            .order_by(ReviewAuditEvent.created_at.desc(), ReviewAuditEvent.id.desc())
+            .limit(limit)
+            .offset(offset)
+        ).all()
+    )
+    return events, total

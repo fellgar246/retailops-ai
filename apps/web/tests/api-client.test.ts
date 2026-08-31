@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { ApiError, apiRequest } from '@/lib/api-client';
+import { ApiError, apiRequest, buildQuery } from '@/lib/api-client';
 import { API_BASE_URL } from '@/lib/config';
 
 afterEach(() => {
@@ -33,5 +33,37 @@ describe('apiRequest', () => {
     });
 
     await expect(apiRequest('/health')).rejects.toBeInstanceOf(ApiError);
+  });
+
+  it('encodes pagination and repeated filters', () => {
+    expect(buildQuery({ limit: 50, offset: 0, status: ['open', 'in_review'] })).toBe(
+      '?limit=50&offset=0&status=open&status=in_review',
+    );
+  });
+
+  it('reads FastAPI error detail and honours cancellation', async () => {
+    vi.stubGlobal(
+      'fetch',
+      async () =>
+        new Response(JSON.stringify({ detail: 'limit must be between 1 and 200' }), {
+          status: 400,
+        }),
+    );
+    await expect(apiRequest('/forecasts')).rejects.toMatchObject({
+      status: 400,
+      detail: 'limit must be between 1 and 200',
+    });
+
+    const controller = new AbortController();
+    vi.stubGlobal('fetch', async (_url: string, init?: RequestInit) => {
+      return new Promise<Response>((_resolve, reject) => {
+        init?.signal?.addEventListener('abort', () =>
+          reject(new DOMException('Aborted', 'AbortError')),
+        );
+      });
+    });
+    const pending = apiRequest('/forecasts', { signal: controller.signal, timeoutMs: 50 });
+    controller.abort();
+    await expect(pending).rejects.toMatchObject({ name: 'ApiError' });
   });
 });

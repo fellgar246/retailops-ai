@@ -10,6 +10,7 @@ Retail operations intelligence platform. This repository currently contains:
 - **Procurement and reconciliation** — persist purchase orders, goods receipts and supplier invoices, then run a deterministic three-way match with explicit tolerances.
 - **AI review contracts** — a provider-neutral reviewer, structured and validated outputs, a fixture mock, conservative routing to human review, and a versioned evaluation harness.
 - **Human review** — persisted cases on document findings and reconciliation exceptions, an immutable AI snapshot, controlled decisions, an append-only audit log, a feedback export and a metrics API.
+- **Operations web app** — a desktop-first shell for the overview, forecast runs, supplier documents, reconciliation exceptions, the human review queue, AI evaluation and the audit trail.
 
 Hosted object storage, document-analysis APIs, a Bedrock adapter and AWS deployment are not implemented yet.
 
@@ -89,7 +90,10 @@ make api        # http://localhost:8000  (docs at /docs)
 make web        # http://localhost:3000
 ```
 
-The landing page shows an API connectivity indicator backed by `GET /health`.
+The web app is the operations console. It reads live API data: no hardcoded
+KPIs. Open `http://localhost:3000` for the overview, then use the sidebar to
+reach forecasts, documents, reconciliations, reviews, AI evaluation, audit
+and settings.
 
 ## Tests
 
@@ -335,9 +339,19 @@ PostgreSQL by default; the `full` profile adds the API and web services.
 | ------ | ------------ | ------------------------------- |
 | GET    | `/health`    | Liveness, returns `{"status": "ok"}` |
 | GET    | `/health/db` | Database connectivity check     |
+| GET    | `/ops/overview` | Forecast, document, reconciliation and review counts |
+| GET    | `/forecasts` | Forecast runs (pagination) |
+| GET    | `/forecasts/{id}` | Run detail, predictions and WAPE/bias |
+| GET    | `/documents` | Supplier documents (filters + pagination) |
+| GET    | `/documents/{id}` | Findings, related reviews and extracted rows |
+| GET    | `/reconciliations` | Three-way match runs |
+| GET    | `/reconciliations/{id}` | Exceptions with PO / receipt / invoice context |
+| GET    | `/exceptions` | Flattened reconciliation exceptions |
 | GET    | `/reviews`   | Human review queue (filters + pagination) |
 | GET    | `/reviews/metrics` | Open cases, decision rates, average duration |
 | GET    | `/reviews/feedback` | Decided cases as evaluation rows |
+| GET    | `/audit`     | Recent review audit events |
+| GET    | `/search`    | Cross-entity lookup for the operations shell |
 | GET    | `/docs`      | OpenAPI documentation           |
 
 ## Architecture decisions

@@ -23,9 +23,15 @@ Endpoints:
 
 - `GET /health` — liveness, returns `{"status": "ok"}`
 - `GET /health/db` — database connectivity
+- `GET /ops/overview` — operational counts from persisted facts
+- `GET /forecasts` — forecast runs
+- `GET /documents` — supplier documents and findings
+- `GET /reconciliations` — three-way match runs and exceptions
 - `GET /reviews` — human review queue
 - `GET /reviews/metrics` — open cases and decision rates
 - `GET /reviews/feedback` — decided cases as evaluation rows
+- `GET /audit` — recent review audit events
+- `GET /search` — lookup across documents, reviews, exceptions and forecasts
 - `GET /docs` — interactive API documentation
 
 Layout:
