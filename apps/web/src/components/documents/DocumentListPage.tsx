@@ -10,6 +10,7 @@ import { Badge } from '@/components/ui/Badge';
 import { DataTable } from '@/components/ui/DataTable';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { ErrorState } from '@/components/ui/ErrorState';
+import { FreshnessBar } from '@/components/ui/FreshnessBar';
 import { LoadingState } from '@/components/ui/LoadingState';
 import { PageHeader } from '@/components/ui/PageHeader';
 
@@ -48,6 +49,12 @@ export function DocumentListPage() {
       <PageHeader
         description="Hojas de oferta procesadas, con hallazgos determinísticos."
         title="Documentos de proveedor"
+      />
+      <FreshnessBar
+        error={resource.error}
+        onRefresh={resource.reload}
+        stale={resource.status === 'loading'}
+        updatedAt={resource.data?.items[0]?.processed_at}
       />
       <div className="filters">
         <label>

@@ -31,6 +31,9 @@ services:
     environment:
       DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-retailops}:${POSTGRES_PASSWORD:-retailops}@postgres:5432/${POSTGRES_DB:-retailops}
       CORS_ORIGINS: http://localhost:3000
+      DOCUMENT_STORAGE_ROOT: /app/data/documents
+    volumes:
+      - document_data:/app/data/documents
     ports:
       - "8000:8000"
     depends_on:
@@ -55,3 +58,5 @@ services:
 volumes:
   postgres_data:
     name: retailops_postgres_data
+  document_data:
+    name: retailops_document_data

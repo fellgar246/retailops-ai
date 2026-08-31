@@ -28,6 +28,7 @@ retailops-documents = "retailops_api.documents.cli:main"
 retailops-reconcile = "retailops_api.procurement.cli:main"
 retailops-review-eval = "retailops_api.review.cli:main"
 retailops-review = "retailops_api.review.ops_cli:main"
+retailops-demo = "retailops_api.demo.cli:main"
 
 [dependency-groups]
 dev = [

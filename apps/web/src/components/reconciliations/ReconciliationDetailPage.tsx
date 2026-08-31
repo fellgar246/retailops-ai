@@ -10,6 +10,7 @@ import { useResource } from '@/lib/use-resource';
 import { Badge } from '@/components/ui/Badge';
 import { DataTable } from '@/components/ui/DataTable';
 import { ErrorState } from '@/components/ui/ErrorState';
+import { FreshnessBar } from '@/components/ui/FreshnessBar';
 import { LoadingState } from '@/components/ui/LoadingState';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Provenance } from '@/components/ui/Provenance';
@@ -25,10 +26,10 @@ export function ReconciliationDetailPage({ id }: { id: number }) {
   }, [resource.data, onlyOpen]);
   const selected = rows.find((item) => item.id === selectedId) ?? rows[0];
 
-  if (resource.status === 'loading' && !resource.data) {
-    return <LoadingState label="Cargando la conciliación…" />;
-  }
-  if (resource.status === 'error' || !resource.data) {
+  if (!resource.data) {
+    if (resource.status === 'loading') {
+      return <LoadingState label="Cargando la conciliación…" />;
+    }
     return (
       <ErrorState
         error={resource.error ?? new Error('Conciliación no encontrada')}
@@ -46,6 +47,12 @@ export function ReconciliationDetailPage({ id }: { id: number }) {
         breadcrumb="Conciliaciones / detalle"
         description={`Versión ${run.version} · generada ${formatDateTime(run.generated_at)}`}
         title={run.scope_key}
+      />
+      <FreshnessBar
+        error={resource.error}
+        onRefresh={resource.reload}
+        stale={resource.status === 'loading'}
+        updatedAt={run.generated_at}
       />
       <section className="panel">
         <p>

@@ -10,8 +10,10 @@ import { Badge } from '@/components/ui/Badge';
 import { DataTable } from '@/components/ui/DataTable';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { ErrorState } from '@/components/ui/ErrorState';
+import { FreshnessBar } from '@/components/ui/FreshnessBar';
 import { LoadingState } from '@/components/ui/LoadingState';
 import { PageHeader } from '@/components/ui/PageHeader';
+
 export function ForecastListPage() {
   const router = useRouter();
   const resource = useResource(
@@ -46,6 +48,12 @@ export function ForecastListPage() {
       <PageHeader
         description={`${resource.data.total} ejecuciones. WAPE y sesgo aparecen cuando hay evaluación.`}
         title="Pronósticos"
+      />
+      <FreshnessBar
+        error={resource.error}
+        onRefresh={resource.reload}
+        stale={resource.status === 'loading'}
+        updatedAt={resource.data.items[0]?.generated_at}
       />
       <DataTable
         caption="Ejecuciones de forecast"

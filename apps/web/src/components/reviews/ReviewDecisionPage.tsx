@@ -28,6 +28,7 @@ import { readReviewer } from '@/lib/reviewer';
 import { useResource } from '@/lib/use-resource';
 import { Badge } from '@/components/ui/Badge';
 import { ErrorState } from '@/components/ui/ErrorState';
+import { FreshnessBar } from '@/components/ui/FreshnessBar';
 import { LoadingState } from '@/components/ui/LoadingState';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Provenance } from '@/components/ui/Provenance';
@@ -92,10 +93,10 @@ export function ReviewDecisionPage({ id }: { id: number }) {
     }
   };
 
-  if (resource.status === 'loading' && !resource.data) {
-    return <LoadingState label="Cargando el caso…" />;
-  }
-  if (resource.status === 'error' || !resource.data) {
+  if (!resource.data) {
+    if (resource.status === 'loading') {
+      return <LoadingState label="Cargando el caso…" />;
+    }
     return (
       <ErrorState
         error={resource.error ?? new Error('Caso no encontrado')}
@@ -149,6 +150,12 @@ export function ReviewDecisionPage({ id }: { id: number }) {
             Volver a la cola
           </Link>
         }
+      />
+      <FreshnessBar
+        error={resource.error}
+        onRefresh={resource.reload}
+        stale={resource.status === 'loading'}
+        updatedAt={item.updated_at}
       />
       <div className="filters">
         <Badge kind="status" labels={STATUS_LABELS} value={item.status} />

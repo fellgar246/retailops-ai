@@ -8,6 +8,7 @@ import { useResource } from '@/lib/use-resource';
 import { DataTable } from '@/components/ui/DataTable';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { ErrorState } from '@/components/ui/ErrorState';
+import { FreshnessBar } from '@/components/ui/FreshnessBar';
 import { LoadingState } from '@/components/ui/LoadingState';
 import { PageHeader } from '@/components/ui/PageHeader';
 
@@ -45,6 +46,12 @@ export function ReconciliationListPage() {
       <PageHeader
         description={`${resource.data.total} ejecuciones. El impacto es la suma firmada de excepciones.`}
         title="Conciliaciones"
+      />
+      <FreshnessBar
+        error={resource.error}
+        onRefresh={resource.reload}
+        stale={resource.status === 'loading'}
+        updatedAt={resource.data.items[0]?.generated_at}
       />
       <DataTable
         caption="Ejecuciones de conciliación"

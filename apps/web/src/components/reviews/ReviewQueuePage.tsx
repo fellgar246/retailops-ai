@@ -10,6 +10,7 @@ import { Badge } from '@/components/ui/Badge';
 import { DataTable } from '@/components/ui/DataTable';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { ErrorState } from '@/components/ui/ErrorState';
+import { FreshnessBar } from '@/components/ui/FreshnessBar';
 import { LoadingState } from '@/components/ui/LoadingState';
 import { PageHeader } from '@/components/ui/PageHeader';
 
@@ -58,6 +59,12 @@ export function ReviewQueuePage() {
       <PageHeader
         description="Ordenada por prioridad e impacto. Estado, severidad y confianza van en columnas distintas."
         title="Cola de revisiones"
+      />
+      <FreshnessBar
+        error={resource.error}
+        onRefresh={resource.reload}
+        stale={resource.status === 'loading'}
+        updatedAt={resource.data?.items[0]?.updated_at}
       />
       <div className="filters">
         <label>

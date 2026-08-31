@@ -10,6 +10,7 @@ import { useResource } from '@/lib/use-resource';
 import { Badge } from '@/components/ui/Badge';
 import { DataTable } from '@/components/ui/DataTable';
 import { ErrorState } from '@/components/ui/ErrorState';
+import { FreshnessBar } from '@/components/ui/FreshnessBar';
 import { LoadingState } from '@/components/ui/LoadingState';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Provenance } from '@/components/ui/Provenance';
@@ -18,10 +19,10 @@ export function DocumentDetailPage({ id }: { id: number }) {
   const resource = useResource((signal) => getDocument(id, signal), [id]);
   const [selectedRow, setSelectedRow] = useState<number | null>(null);
 
-  if (resource.status === 'loading' && !resource.data) {
-    return <LoadingState label="Cargando el documento…" />;
-  }
-  if (resource.status === 'error' || !resource.data) {
+  if (!resource.data) {
+    if (resource.status === 'loading') {
+      return <LoadingState label="Cargando el documento…" />;
+    }
     return (
       <ErrorState
         error={resource.error ?? new Error('Documento no encontrado')}
@@ -41,6 +42,12 @@ export function DocumentDetailPage({ id }: { id: number }) {
         breadcrumb="Documentos / detalle"
         description={`${document.supplier_code ?? 'Proveedor'} · procesado ${formatDateTime(document.processed_at)}`}
         title={document.filename}
+      />
+      <FreshnessBar
+        error={resource.error}
+        onRefresh={resource.reload}
+        stale={resource.status === 'loading'}
+        updatedAt={document.processed_at}
       />
       <div className="filters">
         <Badge kind="status" labels={DOCUMENT_STATUS_LABELS} value={document.status} />

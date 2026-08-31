@@ -1,11 +1,12 @@
 'use client';
 
 import { getOverview } from '@/lib/api';
-import { formatDateTime, formatMoney, formatNumber, formatRelative } from '@/lib/format';
+import { formatDateTime, formatMoney, formatNumber } from '@/lib/format';
 import { FORECAST_STATUS_LABELS, labelOf } from '@/lib/labels';
 import { useResource } from '@/lib/use-resource';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { ErrorState } from '@/components/ui/ErrorState';
+import { FreshnessBar } from '@/components/ui/FreshnessBar';
 import { KpiCard } from '@/components/ui/KpiCard';
 import { LoadingState } from '@/components/ui/LoadingState';
 import { PageHeader } from '@/components/ui/PageHeader';
@@ -34,13 +35,13 @@ export function OverviewPage() {
       <PageHeader
         description="Dónde intervenir hoy, con números tomados de la API."
         title="Overview operativo"
-        actions={
-          <button className="btn" onClick={resource.reload} type="button">
-            Actualizar
-          </button>
-        }
       />
-      <p className="muted">Actualizado {formatRelative(data.generated_at)}</p>
+      <FreshnessBar
+        error={resource.error}
+        onRefresh={resource.reload}
+        stale={resource.status === 'loading'}
+        updatedAt={data.generated_at}
+      />
       <div className="kpi-grid">
         <KpiCard
           href="/reviews?status=open&status=in_review"

@@ -4,7 +4,8 @@ UV := uv --directory $(API_DIR)
 NPM := npm --prefix $(WEB_DIR)
 
 .DEFAULT_GOAL := help
-.PHONY: help setup env dev api web db-up db-down db-logs db-shell migrate migration \
+.PHONY: help setup env ready demo check check-app ml-smoke perf \
+        dev api web db-up db-down db-logs db-shell migrate migration \
         autogenerate db-reset seed synthetic forecast train documents reconcile \
         review-eval reviews review-feedback \
         test test-api test-web lint lint-api lint-web format format-check typecheck \
@@ -21,7 +22,13 @@ setup: env ## Install backend and frontend dependencies
 	cd $(API_DIR) && uv sync --all-groups
 	$(NPM) install
 
-dev: ## Run API and web together (Ctrl-C stops both)
+ready: env db-up migrate ## Recommended start: PostgreSQL in Docker, schema current
+	@echo "Database is ready. Next: make demo && make dev"
+
+demo: ready ## Load catalog, sales, forecast, supplier sheets, matches and review cases
+	cd $(API_DIR) && uv run retailops-demo --preset development --skip-migrate
+
+dev: ## Run API and web from the IDE (Ctrl-C stops both)
 	@$(MAKE) -j2 api web
 
 api: ## Run the FastAPI dev server on :8000
@@ -81,6 +88,19 @@ reviews: ## List the human review queue
 
 review-feedback: ## Export decided reviews as evaluation rows
 	cd $(API_DIR) && uv run retailops-review feedback --output "$(CURDIR)/data/reviews"
+
+perf: ## Time generate, ingest, train, reconciliation and the review queue (tiny scale)
+	cd $(API_DIR) && uv run retailops-demo measure --skip-migrate
+
+ml-smoke: ## Score the mock reviewer on the versioned evaluation cases
+	@$(MAKE) review-eval
+
+check-app: format-check lint typecheck test build ml-smoke ## App quality without images
+
+check: check-app ## Full local quality gate, including schema and image builds
+	@$(MAKE) db-up
+	@$(MAKE) migrate
+	@$(MAKE) docker-build
 
 test: test-api test-web ## Run all tests
 

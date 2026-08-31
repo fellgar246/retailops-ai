@@ -1,4 +1,10 @@
-import type { DocumentDetail, ForecastRunDetail, Overview, ReviewDetail } from '@/lib/types';
+import type {
+  DocumentDetail,
+  ForecastPage,
+  ForecastRunDetail,
+  Overview,
+  ReviewDetail,
+} from '@/lib/types';
 
 export const overviewFixture: Overview = {
   generated_at: '2026-08-30T18:00:00+00:00',
@@ -70,6 +76,26 @@ export const forecastDetailFixture: ForecastRunDetail = {
       actual: null,
     },
   ],
+};
+
+export const forecastPageFixture: ForecastPage = {
+  items: [
+    {
+      id: forecastDetailFixture.id,
+      model_id: forecastDetailFixture.model_id,
+      model_version: forecastDetailFixture.model_version,
+      generated_at: forecastDetailFixture.generated_at,
+      cutoff: forecastDetailFixture.cutoff,
+      horizon: forecastDetailFixture.horizon,
+      problem_id: forecastDetailFixture.problem_id,
+      status: forecastDetailFixture.status,
+      prediction_count: forecastDetailFixture.prediction_count,
+      metrics: forecastDetailFixture.metrics,
+    },
+  ],
+  total: 1,
+  limit: 50,
+  offset: 0,
 };
 
 export const documentDetailFixture: DocumentDetail = {

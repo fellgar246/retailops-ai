@@ -68,6 +68,25 @@ retailops/
 
 ## Local development
 
+Recommended: PostgreSQL in Docker, API and web from the IDE.
+
+```bash
+make ready      # .env, PostgreSQL, migrations
+make demo       # catalog, sales, forecast, sheets, matches, review cases
+make dev        # API (:8000) and web (:3000)
+```
+
+`make demo` is safe to re-run and does not require editing the database by
+hand. Details are in
+[the local runtime note](docs/architecture/local-runtime.md) and
+[the demo walkthrough](docs/architecture/local-demo.md).
+
+The optional full Compose stack (`make stack-up`) runs PostgreSQL, the API and
+the web app in containers. Day-to-day work still uses `make ready` and
+`make dev`.
+
+Individual pipeline commands remain available:
+
 ```bash
 make db-up      # start PostgreSQL and wait until healthy
 make migrate    # apply Alembic migrations
@@ -101,6 +120,9 @@ and settings.
 make test       # backend (pytest) + frontend (Vitest)
 make test-api
 make test-web
+make check-app  # format, lint, types, tests, frontend build, reviewer eval
+make check      # check-app + live migrations + image builds
+make perf       # wide wall-clock samples for generate / ingest / train / match
 ```
 
 Most backend tests run against in-memory SQLite and need nothing running. The
@@ -356,6 +378,8 @@ PostgreSQL by default; the `full` profile adds the API and web services.
 
 ## Architecture decisions
 
+- [Local runtime](docs/architecture/local-runtime.md)
+- [Local demo walkthrough](docs/architecture/local-demo.md)
 - [ADR-001 — Monorepo and Local-First Development Strategy](docs/adr/ADR-001-monorepo-and-local-first-development.md)
 - [ADR-002 — Core Retail Domain Model and Persistence Conventions](docs/adr/ADR-002-core-retail-domain-model.md)
 - [ADR-003 — Synthetic Retail Dataset and Ingestion](docs/adr/ADR-003-synthetic-data-and-ingestion.md)

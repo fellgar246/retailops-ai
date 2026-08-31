@@ -19,6 +19,52 @@ vi.mock('@/lib/api', () => ({
 }));
 
 describe('review decision UI', () => {
+  it('renders a loading state before the case arrives', () => {
+    vi.mocked(getReview).mockReturnValue(new Promise(() => undefined));
+    vi.mocked(getReviewAudit).mockReturnValue(new Promise(() => undefined));
+    render(<ReviewDecisionPage id={12} />);
+    expect(screen.getByText('Cargando el caso…')).toBeInTheDocument();
+  });
+
+  it('renders an API failure with retry when nothing is cached', async () => {
+    vi.mocked(getReview).mockRejectedValue(new ApiError('down', 503, 'API unavailable'));
+    vi.mocked(getReviewAudit).mockResolvedValue({ items: [] });
+    render(<ReviewDecisionPage id={12} />);
+    expect(await screen.findByRole('alert')).toHaveTextContent('API unavailable');
+    expect(screen.getByRole('button', { name: 'Reintentar' })).toBeInTheDocument();
+  });
+
+  it('keeps the case visible while a refresh is in flight', async () => {
+    vi.mocked(getReview).mockResolvedValueOnce(reviewDetailFixture);
+    vi.mocked(getReviewAudit).mockResolvedValue({ items: [] });
+    render(<ReviewDecisionPage id={12} />);
+    expect(await screen.findByText('Propuesta de IA')).toBeInTheDocument();
+
+    vi.mocked(getReview).mockReturnValue(new Promise(() => undefined));
+    await userEvent.click(screen.getByRole('button', { name: 'Actualizar' }));
+
+    expect(screen.getByText('Propuesta de IA')).toBeInTheDocument();
+    expect(screen.getByRole('status')).toHaveTextContent(/Actualizando/);
+  });
+
+  it('reaches the approve action with the keyboard only', async () => {
+    vi.mocked(getReview).mockResolvedValue(reviewDetailFixture);
+    vi.mocked(getReviewAudit).mockResolvedValue({ items: [] });
+    render(<ReviewDecisionPage id={12} />);
+    const approve = await screen.findByRole('button', { name: 'Aprobar recomendación' });
+
+    const user = userEvent.setup();
+    for (let step = 0; step < 20; step += 1) {
+      if (document.activeElement === approve) {
+        break;
+      }
+      await user.tab();
+    }
+    expect(document.activeElement).toBe(approve);
+    await user.keyboard('{Enter}');
+    expect(approveReview).toHaveBeenCalled();
+  });
+
   it('keeps deterministic facts apart from the AI proposal and records approve', async () => {
     vi.mocked(getReview).mockResolvedValue(reviewDetailFixture);
     vi.mocked(getReviewAudit).mockResolvedValue({

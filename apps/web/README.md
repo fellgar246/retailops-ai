@@ -22,6 +22,8 @@ The shell reads the API configured by `NEXT_PUBLIC_API_BASE_URL`. Pages:
 - Auditoría — append-only review history
 - Configuración — local reviewer identity
 
-Loading, empty and error states are first-class. Status, severity and
-confidence stay in separate badges. Deterministic facts, AI proposals and
-human decisions are labelled as such.
+Loading, empty, error and stale states are first-class. A refresh keeps the
+last payload on screen. Status, severity and confidence stay in separate
+badges. Deterministic facts, AI proposals and human decisions are labelled
+as such. The decision workspace stacks below 1200 px so 1280 px at 200 % zoom
+stays usable.

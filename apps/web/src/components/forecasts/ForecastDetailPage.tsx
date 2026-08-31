@@ -9,6 +9,7 @@ import { useResource } from '@/lib/use-resource';
 import { Badge } from '@/components/ui/Badge';
 import { DataTable } from '@/components/ui/DataTable';
 import { ErrorState } from '@/components/ui/ErrorState';
+import { FreshnessBar } from '@/components/ui/FreshnessBar';
 import { LoadingState } from '@/components/ui/LoadingState';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { ForecastChart } from './ForecastChart';
@@ -26,10 +27,10 @@ export function ForecastDetailPage({ id }: { id: number }) {
     );
   }, [resource.data, store, category]);
 
-  if (resource.status === 'loading' && !resource.data) {
-    return <LoadingState label="Cargando el detalle del forecast…" />;
-  }
-  if (resource.status === 'error' || !resource.data) {
+  if (!resource.data) {
+    if (resource.status === 'loading') {
+      return <LoadingState label="Cargando el detalle del forecast…" />;
+    }
     return (
       <ErrorState
         error={resource.error ?? new Error('Ejecución no encontrada')}
@@ -48,6 +49,12 @@ export function ForecastDetailPage({ id }: { id: number }) {
         breadcrumb="Pronósticos / detalle"
         description={`${run.problem_id} · horizonte ${run.horizon} semanas desde ${formatDate(run.cutoff)}.`}
         title={run.model_id}
+      />
+      <FreshnessBar
+        error={resource.error}
+        onRefresh={resource.reload}
+        stale={resource.status === 'loading'}
+        updatedAt={run.generated_at}
       />
       <div className="filters">
         <Badge kind="status" labels={FORECAST_STATUS_LABELS} value={run.status} />

@@ -660,6 +660,24 @@ table.data tbody tr[data-selected='true'] {
   border-color: #f3c4c4;
 }
 
+.notice--stale {
+  background: #fff4dd;
+}
+
+.freshness {
+  display: grid;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.freshness__meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
 .field {
   display: grid;
   gap: 6px;

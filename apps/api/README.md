@@ -9,6 +9,7 @@ uv run pytest            # tests
 uv run ruff check .      # lint
 uv run mypy              # type check
 uv run alembic upgrade head   # apply migrations
+uv run retailops-demo         # one-command local dataset (migrate + seed + ingest + reviews)
 uv run retailops-seed         # load development reference data (idempotent)
 uv run retailops-synthetic    # generate, validate and ingest synthetic history
 uv run retailops-forecast     # walk-forward demand baselines and write the benchmark
@@ -45,6 +46,8 @@ Layout:
 - `src/retailops_api/documents/` — supplier-sheet intake, local storage, parsers and deterministic rules
 - `src/retailops_api/procurement/` — purchase orders, receipts, invoices and deterministic three-way match
 - `src/retailops_api/review/` — reviewer contract, structured results, mock provider, routing, evaluation, human-review cases and metrics
+- `src/retailops_api/demo/` — one-command local dataset for development and demos
+- `src/retailops_api/ops/` — overview counts and cross-entity search
 - `migrations/` — Alembic revisions
 
 The retail schema is documented in
