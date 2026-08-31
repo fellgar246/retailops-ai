@@ -42,10 +42,11 @@ Layout:
 - `src/retailops_api/dataset/` — portable CSV contract, validation and snapshots
 - `src/retailops_api/synthetic/` — deterministic catalog, calendar and demand generators
 - `src/retailops_api/ingestion/` — idempotent catalog upsert, batch sales upsert, run report
-- `src/retailops_api/forecasting/` — weekly demand frame, features, baselines, histogram-GBM training, local model registry
-- `src/retailops_api/documents/` — supplier-sheet intake, local storage, parsers and deterministic rules
+- `src/retailops_api/forecasting/` — weekly demand frame, features, baselines, histogram-GBM training, local and SageMaker model registries
+- `src/retailops_api/documents/` — supplier-sheet intake, local and S3 storage, parsers, Textract translation and deterministic rules
 - `src/retailops_api/procurement/` — purchase orders, receipts, invoices and deterministic three-way match
-- `src/retailops_api/review/` — reviewer contract, structured results, mock provider, routing, evaluation, human-review cases and metrics
+- `src/retailops_api/review/` — reviewer contract, structured results, mock and Bedrock providers, routing, evaluation, human-review cases and metrics
+- `src/retailops_api/core/` — settings, typed AWS config and adapter factories
 - `src/retailops_api/demo/` — one-command local dataset for development and demos
 - `src/retailops_api/ops/` — overview counts and cross-entity search
 - `migrations/` — Alembic revisions

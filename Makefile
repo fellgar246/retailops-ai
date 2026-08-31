@@ -4,11 +4,12 @@ UV := uv --directory $(API_DIR)
 NPM := npm --prefix $(WEB_DIR)
 
 .DEFAULT_GOAL := help
-.PHONY: help setup env ready demo check check-app ml-smoke perf \
+.PHONY: help setup env ready demo check check-app check-infra ml-smoke perf \
         dev api web db-up db-down db-logs db-shell migrate migration \
         autogenerate db-reset seed synthetic forecast train documents reconcile \
         review-eval reviews review-feedback \
         test test-api test-web lint lint-api lint-web format format-check typecheck \
+        tf-fmt-check tf-validate secrets-scan \
         build docker-build stack-up stack-down clean
 
 help: ## Show available targets
@@ -97,7 +98,9 @@ ml-smoke: ## Score the mock reviewer on the versioned evaluation cases
 
 check-app: format-check lint typecheck test build ml-smoke ## App quality without images
 
-check: check-app ## Full local quality gate, including schema and image builds
+check-infra: tf-fmt-check tf-validate ## Terraform format and static validation (no apply)
+
+check: check-app check-infra ## Full local quality gate, including schema, images and Terraform
 	@$(MAKE) db-up
 	@$(MAKE) migrate
 	@$(MAKE) docker-build
@@ -132,6 +135,19 @@ typecheck: ## Type check backend and frontend
 
 build: ## Build the frontend production bundle
 	$(NPM) run build
+
+tf-fmt-check: ## Verify Terraform formatting
+	terraform fmt -check -recursive infra
+
+tf-validate: ## Init (local backend) and validate every environment
+	@for env in dev staging prod; do \
+		echo "terraform validate infra/environments/$$env"; \
+		terraform -chdir=infra/environments/$$env init -backend=false -input=false >/dev/null; \
+		terraform -chdir=infra/environments/$$env validate; \
+	done
+
+secrets-scan: ## Fail if example or Terraform files look like they contain live secrets
+	cd $(API_DIR) && uv run pytest tests/test_secret_scan.py
 
 docker-build: ## Build both container images
 	docker build -t retailops-api:local $(API_DIR)

@@ -1,0 +1,20 @@
+{
+  "DocumentMetadata": { "Pages": 1 },
+  "Blocks": [
+    { "Id": "page-1", "BlockType": "PAGE", "Page": 1 },
+    {
+      "Id": "line-1",
+      "BlockType": "LINE",
+      "Page": 1,
+      "Text": "sku,ean,description,category,cost,vat,case_pack,minimum_order_quantity,lead_time_days",
+      "Geometry": { "BoundingBox": { "Top": 0.10, "Left": 0.05 } }
+    },
+    {
+      "Id": "line-2",
+      "BlockType": "LINE",
+      "Page": 1,
+      "Text": "NW-WATER-500,7501999000028,Spring Water 500ml,BEV-WATER,4.2000,16,12,1,4",
+      "Geometry": { "BoundingBox": { "Top": 0.18, "Left": 0.05 } }
+    }
+  ]
+}

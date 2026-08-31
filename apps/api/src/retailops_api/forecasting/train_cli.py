@@ -15,6 +15,8 @@ from collections.abc import Sequence
 from datetime import date
 from pathlib import Path
 
+from retailops_api.core.adapters import model_registry_for
+from retailops_api.core.config import get_settings
 from retailops_api.forecasting.booster import HistGBMTrainerConfig
 from retailops_api.forecasting.feature_contract import FeatureConfig
 from retailops_api.forecasting.problem import (
@@ -24,7 +26,7 @@ from retailops_api.forecasting.problem import (
     DEFAULT_TEST_PERIODS,
     DEFAULT_VALIDATION_PERIODS,
 )
-from retailops_api.forecasting.registry import DEFAULT_MODEL_NAME, LocalModelRegistry
+from retailops_api.forecasting.registry import DEFAULT_MODEL_NAME
 from retailops_api.forecasting.sources import (
     FRAME_FILE,
     default_forecast_output,
@@ -48,7 +50,10 @@ def main(argv: Sequence[str] | None = None) -> int:
             source=args.source,
         )
         output = args.output or default_forecast_output()
-        registry = LocalModelRegistry(args.registry or default_registry_root())
+        registry = model_registry_for(
+            get_settings(),
+            root=args.registry or default_registry_root(),
+        )
         result = run_training(
             dataset,
             frame,

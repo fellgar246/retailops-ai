@@ -1,0 +1,8 @@
+# Production placeholder. Copy to terraform.tfvars and replace placeholders.
+# Do not commit live secrets.
+
+account_id            = "000000000000"
+documents_bucket_name = "retailops-000000000000-prod-documents"
+bedrock_model_id      = "anthropic.claude-sonnet-4-20250514-v1:0"
+master_password       = "replace-via-TF_VAR-or-secrets-manager"
+cors_origins          = ""

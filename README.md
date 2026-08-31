@@ -12,7 +12,11 @@ Retail operations intelligence platform. This repository currently contains:
 - **Human review** — persisted cases on document findings and reconciliation exceptions, an immutable AI snapshot, controlled decisions, an append-only audit log, a feedback export and a metrics API.
 - **Operations web app** — a desktop-first shell for the overview, forecast runs, supplier documents, reconciliation exceptions, the human review queue, AI evaluation and the audit trail.
 
-Hosted object storage, document-analysis APIs, a Bedrock adapter and AWS deployment are not implemented yet.
+Cloud adapters (S3 storage, Textract sheet translation, Bedrock review,
+SageMaker registry) implement the same contracts as the local stack and
+stay disabled unless `AWS_ENABLED` and the matching feature flag are set.
+Terraform under `infra/` is formatted and validated locally; it is not
+applied by developer commands.
 
 ## Prerequisites
 
@@ -23,6 +27,7 @@ Hosted object storage, document-analysis APIs, a Bedrock adapter and AWS deploym
 | Node.js        | ≥ 20.11    | Frontend runtime                          |
 | Docker         | ≥ 24       | PostgreSQL and image builds               |
 | GNU Make       | any        | Developer command entry point             |
+| Terraform      | ≥ 1.6      | Offline `infra/` validation (`make check-infra`) |
 
 ## Installation
 
@@ -44,6 +49,19 @@ Configuration lives in environment variables. `make setup` copies
 | `CORS_ORIGINS`             | Comma-separated origins allowed by the API   |
 | `NEXT_PUBLIC_API_BASE_URL` | API base URL used by the browser             |
 | `DOCUMENT_STORAGE_ROOT`    | Local root for stored supplier files (optional; default `data/documents`) |
+| `AWS_ENABLED`              | Master switch for cloud adapters (default `false`) |
+| `AWS_REGION`               | Region used when a cloud adapter is enabled |
+| `AWS_ACCOUNT_ID`           | Account id for ARN construction (empty locally) |
+| `AWS_ENVIRONMENT_NAME`     | Name segment for `{prefix}-{environment}-…` resources |
+| `AWS_RESOURCE_PREFIX`      | Shared resource prefix (default `retailops`) |
+| `AWS_DOCUMENTS_BUCKET`     | Object-store bucket when S3 storage is enabled |
+| `AWS_DOCUMENTS_PREFIX`     | Object key prefix (default `documents`) |
+| `AWS_BEDROCK_MODEL_ID`     | Bedrock model id when the hosted reviewer is enabled |
+| `AWS_SAGEMAKER_MODEL_GROUP` | Model package group name |
+| `AWS_USE_S3_STORAGE`       | Use S3 document storage (requires `AWS_ENABLED`) |
+| `AWS_USE_TEXTRACT`         | Reserved for hosted sheet analysis |
+| `AWS_USE_BEDROCK`          | Use the Bedrock reviewer (requires `AWS_ENABLED`) |
+| `AWS_USE_SAGEMAKER_REGISTRY` | Use the SageMaker registry (requires `AWS_ENABLED`) |
 
 PostgreSQL is published on host port **5435** by default so it never collides
 with a locally installed PostgreSQL. Change `POSTGRES_PORT` if you prefer 5432.
@@ -57,7 +75,7 @@ retailops/
 │   └── web/          Next.js frontend (App Router, TypeScript, Vitest)
 ├── ml/               Optional notebooks (training lives in the API package)
 ├── artifacts/        Local model registry versions (git-ignored)
-├── infra/            Terraform modules and environments (not yet implemented)
+├── infra/            Terraform modules and environment compositions
 ├── data/             Local raw/processed/synthetic/document/review data (git-ignored)
 ├── docs/             Architecture notes and ADRs
 ├── scripts/          Developer scripts
@@ -121,7 +139,8 @@ make test       # backend (pytest) + frontend (Vitest)
 make test-api
 make test-web
 make check-app  # format, lint, types, tests, frontend build, reviewer eval
-make check      # check-app + live migrations + image builds
+make check      # check-app + live migrations + image builds + terraform validate
+make check-infra # terraform fmt + validate (no apply)
 make perf       # wide wall-clock samples for generate / ingest / train / match
 ```
 
@@ -261,9 +280,8 @@ not depend on notebook state.
 
 The registry operations (register, list, get, update approval, get champion)
 are storage-neutral. The local implementation is a directory of versions;
-the same calls map onto SageMaker Model Registry (`CreateModelPackage`,
-`ModelPackageVersion`, `ModelApprovalStatus`, the approved package an
-endpoint loads). Details are in
+`SageMakerModelRegistry` implements the same calls with an injected client
+and does not upload artifacts. Details are in
 [the ML forecasting note](docs/architecture/ml-forecasting.md).
 
 ## Supplier document intake
@@ -275,8 +293,9 @@ required fields, EAN shape, cost and quantity bounds, configured VAT rates,
 in-file duplicates, then catalog cross-checks (supplier SKU mapped elsewhere,
 EAN already on a product, cost increase vs current term, category mismatch).
 Findings are persisted; the document ends `review_ready` or `parse_failed`.
-Storage is a contract — the local directory is one implementation. Details
-are in [the intake note](docs/architecture/supplier-document-intake.md).
+Storage is a contract — the local directory is one implementation;
+`S3DocumentStorage` is the object-store adapter. Details are in
+[the intake note](docs/architecture/supplier-document-intake.md).
 
 ## Procurement and reconciliation
 
@@ -298,8 +317,8 @@ Malformed output is rejected and must not be used.
 
 The local implementation is `MockAIReviewer`, a fixture double for normal,
 low-confidence, malformed and provider-failure behaviour. It does not
-emulate a model. A hosted adapter can implement the same contract and be
-scored on the same cases.
+emulate a model. `BedrockAIReviewer` implements the same contract behind
+an injected client and is scored the same way.
 
 AI may classify uncertain category text, summarize findings, explain a
 reconciliation exception, suggest a next action and assign confidence. It
@@ -389,6 +408,12 @@ PostgreSQL by default; the `full` profile adds the API and web services.
 - [ADR-007 — Procurement Documents and Deterministic Reconciliation](docs/adr/ADR-007-procurement-reconciliation.md)
 - [ADR-008 — AI Review Contracts, Mock Provider and Evaluation](docs/adr/ADR-008-ai-review-contracts.md)
 - [ADR-009 — Human Review, Audit and Feedback](docs/adr/ADR-009-human-review-audit-feedback.md)
+- [ADR-010 — AWS Adapters and Terraform Pre-Deployment](docs/adr/ADR-010-aws-adapters-and-terraform.md)
+- [AWS adapters](docs/architecture/aws-adapters.md)
+- [Human review callback workflow](docs/architecture/human-review-cloud-workflow.md)
+- [IAM and security](docs/architecture/iam-security.md)
+- [Cloud readiness](docs/runbooks/cloud-readiness.md)
+- [Terraform](infra/README.md)
 
 ## Security baseline
 

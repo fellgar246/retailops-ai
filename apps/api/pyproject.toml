@@ -38,6 +38,9 @@ dev = [
     "ruff>=0.8.0",
     "mypy>=1.13.0",
 ]
+aws = [
+    "boto3>=1.35.0",
+]
 
 [build-system]
 requires = ["hatchling"]
@@ -75,5 +78,5 @@ strict = true
 plugins = ["pydantic.mypy"]
 
 [[tool.mypy.overrides]]
-module = ["sklearn.*", "joblib", "openpyxl", "openpyxl.*", "pypdf", "pypdf.*"]
+module = ["sklearn.*", "joblib", "openpyxl", "openpyxl.*", "pypdf", "pypdf.*", "boto3", "boto3.*"]
 ignore_missing_imports = true

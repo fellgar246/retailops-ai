@@ -6,6 +6,7 @@ reconciliation amounts stay the source of truth. Human decisions, the audit
 log and feedback rows live alongside those contracts.
 """
 
+from retailops_api.review.bedrock import BedrockAIReviewer
 from retailops_api.review.cases import (
     ALLOWED_TRANSITIONS,
     ReviewConflictError,
@@ -17,6 +18,7 @@ from retailops_api.review.cases import (
     ReviewValidationError,
     can_transition,
 )
+from retailops_api.review.cloud_workflow import LocalCallbackWorkflow
 from retailops_api.review.contract import AIReviewer, SafeReview, build_request, review_safely
 from retailops_api.review.metrics import ReviewMetrics, collect_metrics
 from retailops_api.review.mock import MockAIReviewer, MockFixture
@@ -50,7 +52,9 @@ __all__ = [
     "DEFAULT_USAGE_POLICY",
     "FORBIDDEN_USES",
     "AIReviewer",
+    "BedrockAIReviewer",
     "ExceptionExplanation",
+    "LocalCallbackWorkflow",
     "MockAIReviewer",
     "MockFixture",
     "RecommendedAction",

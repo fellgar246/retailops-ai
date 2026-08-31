@@ -136,6 +136,15 @@ def parse_xlsx(data: bytes) -> ParseResult:
     return ParseResult(rows=tuple(rows), issues=tuple(issues))
 
 
+def parse_cell_table(
+    table: Sequence[Sequence[object]],
+    *,
+    source_row_offset: int = 1,
+) -> ParseResult:
+    """Parse an already-reconstructed grid of cells into a supplier sheet."""
+    return _parse_row_table(table, source_row_offset=source_row_offset)
+
+
 def parse_delimited_table(text: str, *, source_row_offset: int = 1) -> ParseResult:
     """Parse already-extracted tabular text (CSV / TSV / pipe / semicolon)."""
     sample = text.lstrip("\ufeff")

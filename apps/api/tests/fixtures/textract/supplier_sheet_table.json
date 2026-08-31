@@ -1,0 +1,38 @@
+{
+  "DocumentMetadata": { "Pages": 1 },
+  "Blocks": [
+    { "Id": "page-1", "BlockType": "PAGE", "Page": 1 },
+    {
+      "Id": "table-1",
+      "BlockType": "TABLE",
+      "Page": 1,
+      "Relationships": [
+        {
+          "Type": "CHILD",
+          "Ids": [
+            "c-1-1", "c-1-2", "c-1-3", "c-1-4", "c-1-5", "c-1-6", "c-1-7", "c-1-8", "c-1-9",
+            "c-2-1", "c-2-2", "c-2-3", "c-2-4", "c-2-5", "c-2-6", "c-2-7", "c-2-8", "c-2-9"
+          ]
+        }
+      ]
+    },
+    { "Id": "c-1-1", "BlockType": "CELL", "RowIndex": 1, "ColumnIndex": 1, "Text": "SKU" },
+    { "Id": "c-1-2", "BlockType": "CELL", "RowIndex": 1, "ColumnIndex": 2, "Text": "Barcode" },
+    { "Id": "c-1-3", "BlockType": "CELL", "RowIndex": 1, "ColumnIndex": 3, "Text": "Description" },
+    { "Id": "c-1-4", "BlockType": "CELL", "RowIndex": 1, "ColumnIndex": 4, "Text": "Category" },
+    { "Id": "c-1-5", "BlockType": "CELL", "RowIndex": 1, "ColumnIndex": 5, "Text": "Cost" },
+    { "Id": "c-1-6", "BlockType": "CELL", "RowIndex": 1, "ColumnIndex": 6, "Text": "VAT" },
+    { "Id": "c-1-7", "BlockType": "CELL", "RowIndex": 1, "ColumnIndex": 7, "Text": "Case pack" },
+    { "Id": "c-1-8", "BlockType": "CELL", "RowIndex": 1, "ColumnIndex": 8, "Text": "MOQ" },
+    { "Id": "c-1-9", "BlockType": "CELL", "RowIndex": 1, "ColumnIndex": 9, "Text": "Lead time days" },
+    { "Id": "c-2-1", "BlockType": "CELL", "RowIndex": 2, "ColumnIndex": 1, "Text": "NW-SODA-330" },
+    { "Id": "c-2-2", "BlockType": "CELL", "RowIndex": 2, "ColumnIndex": 2, "Text": "7501999000011" },
+    { "Id": "c-2-3", "BlockType": "CELL", "RowIndex": 2, "ColumnIndex": 3, "Text": "New Cola 330ml" },
+    { "Id": "c-2-4", "BlockType": "CELL", "RowIndex": 2, "ColumnIndex": 4, "Text": "BEV-SOFT" },
+    { "Id": "c-2-5", "BlockType": "CELL", "RowIndex": 2, "ColumnIndex": 5, "Text": "6.5000" },
+    { "Id": "c-2-6", "BlockType": "CELL", "RowIndex": 2, "ColumnIndex": 6, "Text": "16" },
+    { "Id": "c-2-7", "BlockType": "CELL", "RowIndex": 2, "ColumnIndex": 7, "Text": "24" },
+    { "Id": "c-2-8", "BlockType": "CELL", "RowIndex": 2, "ColumnIndex": 8, "Text": "1" },
+    { "Id": "c-2-9", "BlockType": "CELL", "RowIndex": 2, "ColumnIndex": 9, "Text": "5" }
+  ]
+}

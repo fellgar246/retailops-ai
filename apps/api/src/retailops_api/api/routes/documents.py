@@ -1,4 +1,3 @@
-from pathlib import Path
 from typing import Annotated, Any
 
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -6,24 +5,18 @@ from sqlalchemy.orm import Session
 
 from retailops_api.api.deps import get_db
 from retailops_api.api.paging import DEFAULT_LIMIT, validate_page
+from retailops_api.core.adapters import document_storage_for
 from retailops_api.core.config import get_settings
-from retailops_api.documents.paths import default_document_root
 from retailops_api.documents.query import get_document, list_documents
-from retailops_api.documents.storage import LocalDocumentStorage
+from retailops_api.documents.storage import DocumentStorage
 from retailops_api.domain.repositories import get_supplier_by_code
 
 router = APIRouter(prefix="/documents", tags=["documents"])
 DbSession = Annotated[Session, Depends(get_db)]
 
 
-def get_document_storage() -> LocalDocumentStorage:
-    settings = get_settings()
-    root = (
-        Path(settings.document_storage_root)
-        if settings.document_storage_root
-        else default_document_root()
-    )
-    return LocalDocumentStorage(root)
+def get_document_storage() -> DocumentStorage:
+    return document_storage_for(get_settings())
 
 
 @router.get("")
@@ -55,7 +48,7 @@ def supplier_documents(
 def supplier_document(
     document_id: int,
     session: DbSession,
-    storage: Annotated[LocalDocumentStorage, Depends(get_document_storage)],
+    storage: Annotated[DocumentStorage, Depends(get_document_storage)],
 ) -> dict[str, Any]:
     payload = get_document(session, document_id, storage)
     if payload is None:

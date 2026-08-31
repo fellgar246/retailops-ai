@@ -19,6 +19,7 @@ from retailops_api.forecasting.registry import (
     ModelRegistry,
     ModelVersion,
 )
+from retailops_api.forecasting.sagemaker_registry import SageMakerModelRegistry
 from retailops_api.forecasting.split import TemporalSplit, split_holdout, split_temporal
 
 __all__ = [
@@ -42,6 +43,7 @@ __all__ = [
     "ModelVersion",
     "MovingAverageForecaster",
     "NaiveForecaster",
+    "SageMakerModelRegistry",
     "SeasonalNaiveForecaster",
     "TemporalSplit",
     "build_forecast_frame",

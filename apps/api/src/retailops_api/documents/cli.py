@@ -14,9 +14,9 @@ import sys
 from collections.abc import Sequence
 from pathlib import Path
 
+from retailops_api.core.adapters import document_storage_for
 from retailops_api.core.config import get_settings
 from retailops_api.db.session import get_session_factory
-from retailops_api.documents.paths import default_document_root
 from retailops_api.documents.process import process_document
 from retailops_api.documents.storage import LocalDocumentStorage
 from retailops_api.documents.types import DocumentProcessError, ProcessResult
@@ -31,7 +31,11 @@ def main(argv: Sequence[str] | None = None) -> int:
         return 1
     try:
         data = path.read_bytes()
-        storage = LocalDocumentStorage(_storage_root(args.storage))
+        storage = (
+            LocalDocumentStorage(args.storage)
+            if args.storage is not None
+            else document_storage_for(get_settings())
+        )
         with get_session_factory()() as session:
             try:
                 result = process_document(
@@ -73,15 +77,6 @@ def _parse_args(argv: Sequence[str] | None) -> argparse.Namespace:
     )
     parser.add_argument("--media-type", help="Override media-type detection from the filename.")
     return parser.parse_args(argv)
-
-
-def _storage_root(override: Path | None) -> Path:
-    if override is not None:
-        return override
-    configured = get_settings().document_storage_root.strip()
-    if configured:
-        return Path(configured)
-    return default_document_root()
 
 
 def _print_result(result: ProcessResult) -> None:

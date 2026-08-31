@@ -42,7 +42,7 @@ from retailops_api.forecasting.promotion import (
 from retailops_api.forecasting.registry import (
     DEFAULT_MODEL_NAME,
     ApprovalStatus,
-    LocalModelRegistry,
+    ModelRegistry,
     ModelVersion,
 )
 from retailops_api.forecasting.split import TemporalSplit, split_holdout
@@ -83,7 +83,7 @@ def run_training(
     summary: DatasetSummary,
     settings: TrainSettings | None = None,
     output_dir: Path,
-    registry: LocalModelRegistry,
+    registry: ModelRegistry,
 ) -> TrainResult:
     """Build features, fit, score against baselines, write the artifact and register it.
 
@@ -350,7 +350,7 @@ def _write_outputs(
 
 
 def _load_champion(
-    registry: LocalModelRegistry,
+    registry: ModelRegistry,
     model_name: str,
 ) -> tuple[HistGBMForecaster | None, ModelVersion | None]:
     version = registry.get_champion(model_name)
