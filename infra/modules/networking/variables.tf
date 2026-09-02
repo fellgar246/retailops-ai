@@ -29,6 +29,12 @@ variable "enable_nat_gateway" {
   default     = true
 }
 
+variable "enable_public_ingress" {
+  type        = bool
+  description = "Open ALB ports 80 and 8080 to 0.0.0.0/0. Leave false until public traffic is intended."
+  default     = true
+}
+
 variable "tags" {
   type        = map(string)
   description = "Tags applied to every networking resource."

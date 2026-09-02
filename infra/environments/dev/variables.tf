@@ -1,6 +1,6 @@
 variable "project" {
   type    = string
-  default = "retailops"
+  default = "retailops-ai"
 }
 
 variable "environment" {
@@ -15,7 +15,7 @@ variable "aws_region" {
 
 variable "account_id" {
   type        = string
-  description = "AWS account id. Placeholder until a real account is selected."
+  description = "AWS account id. Must match the authenticated caller."
 }
 
 variable "azs" {
@@ -43,34 +43,20 @@ variable "documents_bucket_name" {
   description = "Globally unique documents bucket. Include the account id in the name."
 }
 
-variable "bedrock_model_id" {
+variable "budget_limit_usd" {
   type        = string
-  description = "Bedrock model id the API may invoke after account access is granted."
+  description = "Monthly AWS Budget limit in USD for this account."
+  default     = "50"
 }
 
-variable "sagemaker_model_group" {
-  type    = string
-  default = "category-forecast"
-}
-
-variable "master_password" {
+variable "budget_alert_email" {
   type        = string
-  sensitive   = true
-  description = "RDS master password. Set TF_VAR_master_password; do not put a real value in tfvars."
-}
-
-variable "api_image" {
-  type    = string
-  default = "public.ecr.aws/docker/library/python:3.12-slim"
-}
-
-variable "web_image" {
-  type    = string
-  default = "public.ecr.aws/docker/library/node:20-alpine"
-}
-
-variable "cors_origins" {
-  type        = string
+  description = "Optional budget alert subscriber. Empty skips notifications."
   default     = ""
-  description = "Set to the load-balancer origin after the first apply."
+}
+
+variable "budget_time_period_start" {
+  type        = string
+  description = "Budget start in AWS format YYYY-MM-DD_HH:MM."
+  default     = "2026-09-01_00:00"
 }

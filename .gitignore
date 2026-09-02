@@ -37,7 +37,12 @@ coverage/
 *.tfstate.*
 *.tfvars
 !*.tfvars.example
+backend.hcl
 crash.log
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
 
 # --- Data (keep directory structure only) ---
 data/raw/*

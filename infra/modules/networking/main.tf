@@ -79,24 +79,19 @@ resource "aws_route_table_association" "private" {
 
 resource "aws_security_group" "alb" {
   name        = "${var.name_prefix}-alb"
-  description = "Public HTTP ingress for the application load balancer."
+  description = var.enable_public_ingress ? "Public HTTP ingress for the application load balancer." : "ALB security-group foundation. Public ingress is disabled."
   vpc_id      = aws_vpc.this.id
   tags        = merge(var.tags, { Name = "${var.name_prefix}-alb" })
 
-  ingress {
-    description = "HTTP web"
-    from_port   = 80
-    to_port     = 80
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-
-  ingress {
-    description = "HTTP API"
-    from_port   = 8080
-    to_port     = 8080
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
+  dynamic "ingress" {
+    for_each = var.enable_public_ingress ? [80, 8080] : []
+    content {
+      description = ingress.value == 80 ? "HTTP web" : "HTTP API"
+      from_port   = ingress.value
+      to_port     = ingress.value
+      protocol    = "tcp"
+      cidr_blocks = ["0.0.0.0/0"]
+    }
   }
 
   egress {

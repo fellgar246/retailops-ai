@@ -15,8 +15,12 @@ Retail operations intelligence platform. This repository currently contains:
 Cloud adapters (S3 storage, Textract sheet translation, Bedrock review,
 SageMaker registry) implement the same contracts as the local stack and
 stay disabled unless `AWS_ENABLED` and the matching feature flag are set.
-Terraform under `infra/` is formatted and validated locally; it is not
-applied by developer commands.
+`AWS_ENABLED=false` remains the local default.
+
+The `dev` AWS foundation (remote state, VPC, IAM, documents bucket, ECR
+and Secrets Manager containers) can be applied from `infra/`. Local
+developer commands never plan or apply. They never enable Bedrock,
+Textract, SageMaker, ECS or RDS. Staging and prod stay placeholders.
 
 ## Prerequisites
 
@@ -27,7 +31,7 @@ applied by developer commands.
 | Node.js        | ≥ 20.11    | Frontend runtime                          |
 | Docker         | ≥ 24       | PostgreSQL and image builds               |
 | GNU Make       | any        | Developer command entry point             |
-| Terraform      | ≥ 1.6      | Offline `infra/` validation (`make check-infra`) |
+| Terraform      | ≥ 1.6      | Offline `infra/` validation (`make check-infra`); 1.10+ for S3 state locking |
 
 ## Installation
 
@@ -409,10 +413,12 @@ PostgreSQL by default; the `full` profile adds the API and web services.
 - [ADR-008 — AI Review Contracts, Mock Provider and Evaluation](docs/adr/ADR-008-ai-review-contracts.md)
 - [ADR-009 — Human Review, Audit and Feedback](docs/adr/ADR-009-human-review-audit-feedback.md)
 - [ADR-010 — AWS Adapters and Terraform Pre-Deployment](docs/adr/ADR-010-aws-adapters-and-terraform.md)
+- [ADR-011 — AWS Foundation and Remote Terraform State](docs/adr/ADR-011-aws-foundation-and-remote-state.md)
 - [AWS adapters](docs/architecture/aws-adapters.md)
 - [Human review callback workflow](docs/architecture/human-review-cloud-workflow.md)
 - [IAM and security](docs/architecture/iam-security.md)
 - [Cloud readiness](docs/runbooks/cloud-readiness.md)
+- [AWS foundation](docs/runbooks/aws-foundation.md)
 - [Terraform](infra/README.md)
 
 ## Security baseline

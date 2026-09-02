@@ -1,35 +1,84 @@
+output "name_prefix" {
+  value = module.foundation.name_prefix
+}
+
 output "vpc_id" {
-  value = module.platform.vpc_id
+  value = module.foundation.vpc_id
+}
+
+output "public_subnet_ids" {
+  value = module.foundation.public_subnet_ids
+}
+
+output "private_subnet_ids" {
+  value = module.foundation.private_subnet_ids
+}
+
+output "alb_security_group_id" {
+  value = module.foundation.alb_security_group_id
+}
+
+output "ecs_security_group_id" {
+  value = module.foundation.ecs_security_group_id
+}
+
+output "rds_security_group_id" {
+  value = module.foundation.rds_security_group_id
 }
 
 output "documents_bucket_name" {
-  value = module.platform.documents_bucket_name
+  value = module.foundation.documents_bucket_name
+}
+
+output "documents_bucket_arn" {
+  value = module.foundation.documents_bucket_arn
 }
 
 output "ecr_repository_urls" {
-  value = module.platform.ecr_repository_urls
+  value = module.foundation.ecr_repository_urls
 }
 
-output "db_address" {
-  value = module.platform.db_address
+output "ecs_execution_role_arn" {
+  value = module.foundation.ecs_execution_role_arn
 }
 
-output "alb_dns_name" {
-  value = module.platform.alb_dns_name
-}
-
-output "ecs_cluster_name" {
-  value = module.platform.ecs_cluster_name
-}
-
-output "review_state_machine_arn" {
-  value = module.platform.review_state_machine_arn
+output "ecs_execution_role_name" {
+  value = module.foundation.ecs_execution_role_name
 }
 
 output "api_task_role_arn" {
-  value = module.platform.api_task_role_arn
+  value = module.foundation.api_task_role_arn
 }
 
-output "sagemaker_model_package_group" {
-  value = module.platform.sagemaker_model_package_group
+output "api_task_role_name" {
+  value = module.foundation.api_task_role_name
+}
+
+output "document_processor_role_arn" {
+  value = module.foundation.document_processor_role_arn
+}
+
+output "document_processor_role_name" {
+  value = module.foundation.document_processor_role_name
+}
+
+output "ml_role_arn" {
+  value = module.foundation.ml_role_arn
+}
+
+output "ml_role_name" {
+  value = module.foundation.ml_role_name
+}
+
+output "secret_arns" {
+  value       = module.foundation.secret_arns
+  description = "Secret ARNs only. Values are never exported."
+}
+
+output "secret_names" {
+  value = module.foundation.secret_names
+}
+
+output "budget_name" {
+  value = module.foundation.budget_name
 }

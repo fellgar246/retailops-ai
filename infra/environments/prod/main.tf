@@ -1,3 +1,4 @@
+# Placeholder only. Do not apply prod while only the dev foundation is live.
 module "platform" {
   source = "../../modules/platform"
 

@@ -1,0 +1,8 @@
+# After the first local apply, copy to backend.hcl (git-ignored) and migrate:
+#   terraform init -migrate-state -backend-config=backend.hcl
+
+bucket       = "retailops-ai-tfstate-000000000000"
+key          = "retailops-ai/bootstrap/terraform.tfstate"
+region       = "us-east-1"
+encrypt      = true
+use_lockfile = true

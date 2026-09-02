@@ -1,3 +1,4 @@
+# Placeholder only. Do not apply staging while only the dev foundation is live.
 module "platform" {
   source = "../../modules/platform"
 

@@ -139,8 +139,11 @@ build: ## Build the frontend production bundle
 tf-fmt-check: ## Verify Terraform formatting
 	terraform fmt -check -recursive infra
 
-tf-validate: ## Init (local backend) and validate every environment
-	@for env in dev staging prod; do \
+tf-validate: ## Init (local backend) and validate bootstrap plus every environment
+	@echo "terraform validate infra/bootstrap"; \
+	terraform -chdir=infra/bootstrap init -backend=false -input=false >/dev/null; \
+	terraform -chdir=infra/bootstrap validate; \
+	for env in dev staging prod; do \
 		echo "terraform validate infra/environments/$$env"; \
 		terraform -chdir=infra/environments/$$env init -backend=false -input=false >/dev/null; \
 		terraform -chdir=infra/environments/$$env validate; \

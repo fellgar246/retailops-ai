@@ -1,28 +1,22 @@
-module "platform" {
-  source = "../../modules/platform"
+module "foundation" {
+  source = "../../modules/foundation"
 
-  project                    = var.project
-  environment                = var.environment
-  aws_region                 = var.aws_region
-  account_id                 = var.account_id
-  azs                        = var.azs
-  vpc_cidr                   = var.vpc_cidr
-  public_subnet_cidrs        = var.public_subnet_cidrs
-  private_subnet_cidrs       = var.private_subnet_cidrs
-  enable_nat_gateway         = true
-  documents_bucket_name      = var.documents_bucket_name
-  ecr_namespace              = "${var.project}/${var.environment}"
-  image_tag_mutability       = "MUTABLE"
-  master_password            = var.master_password
-  db_instance_class          = "db.t4g.micro"
-  db_multi_az                = false
-  db_backup_retention_period = 1
-  skip_final_snapshot        = true
-  api_image                  = var.api_image
-  web_image                  = var.web_image
-  desired_count              = 1
-  cors_origins               = var.cors_origins
-  bedrock_model_id           = var.bedrock_model_id
-  sagemaker_model_group      = var.sagemaker_model_group
-  log_retention_days         = 14
+  project                     = var.project
+  environment                 = var.environment
+  aws_region                  = var.aws_region
+  account_id                  = var.account_id
+  azs                         = var.azs
+  vpc_cidr                    = var.vpc_cidr
+  public_subnet_cidrs         = var.public_subnet_cidrs
+  private_subnet_cidrs        = var.private_subnet_cidrs
+  enable_nat_gateway          = false
+  enable_public_ingress       = false
+  documents_bucket_name       = var.documents_bucket_name
+  force_destroy_documents     = true
+  ecr_repository_names        = ["${var.project}-${var.environment}-api", "${var.project}-${var.environment}-web"]
+  image_tag_mutability        = "IMMUTABLE"
+  secret_recovery_window_days = 0
+  budget_limit_usd            = var.budget_limit_usd
+  budget_alert_email          = var.budget_alert_email
+  budget_time_period_start    = var.budget_time_period_start
 }
