@@ -5,8 +5,6 @@ reconciliation run/exception tables. Lines are owned by their header
 (ON DELETE CASCADE). Catalog and cross-document foreign keys are
 ON DELETE RESTRICT. A run owns its exceptions.
 
-See docs/adr/ADR-007-procurement-reconciliation.md for the modelling decisions.
-
 Revision ID: e8b1c03d4a29
 Revises: d4e8a91c2f07
 Create Date: 2026-08-30 16:00:00.000000

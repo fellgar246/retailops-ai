@@ -5,8 +5,6 @@ can be stored: one run per model and origin, one prediction row per store,
 category and forecast week. Predictions are owned by their run
 (ON DELETE CASCADE). Entity identity uses store and category business codes.
 
-See docs/adr/ADR-004-forecast-evaluation.md for the modelling decisions.
-
 Revision ID: c7e4f19a2b08
 Revises: 024162a4b5f3
 Create Date: 2026-08-30 13:32:00.000000

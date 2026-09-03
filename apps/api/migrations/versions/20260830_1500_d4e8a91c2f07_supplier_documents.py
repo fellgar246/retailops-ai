@@ -4,8 +4,6 @@ Creates supplier_documents and document_findings so a stored supplier file
 can be reviewed deterministically. Findings are owned by the document
 (ON DELETE CASCADE). The supplier foreign key is ON DELETE RESTRICT.
 
-See docs/adr/ADR-006-supplier-document-intake.md for the modelling decisions.
-
 Revision ID: d4e8a91c2f07
 Revises: c7e4f19a2b08
 Create Date: 2026-08-30 15:00:00.000000

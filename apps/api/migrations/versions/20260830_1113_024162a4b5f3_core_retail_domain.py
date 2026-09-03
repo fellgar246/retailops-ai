@@ -4,8 +4,6 @@ Creates the retail catalog and sales schema: categories, stores, suppliers,
 products, supplier_products and sales_records. Tables are created parent-first
 and dropped child-first because every foreign key is ON DELETE RESTRICT.
 
-See docs/adr/ADR-002-core-retail-domain-model.md for the modelling decisions.
-
 Revision ID: 024162a4b5f3
 Revises: 6424a6340d6e
 Create Date: 2026-08-30 11:13:37.632392

@@ -51,9 +51,6 @@ Layout:
 - `src/retailops_api/ops/` — overview counts and cross-entity search
 - `migrations/` — Alembic revisions
 
-The retail schema is documented in
-[`docs/architecture/retail-domain-er-model.md`](../../docs/architecture/retail-domain-er-model.md).
-
 Tests default to in-memory SQLite. PostgreSQL integration tests create their own
 throwaway databases and skip when the server is unreachable; set
 `RETAILOPS_SKIP_POSTGRES_TESTS=1` to skip them explicitly.

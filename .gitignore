@@ -62,6 +62,7 @@ artifacts/models/*
 
 # --- Docs ---
 docs/
+reserved-docs/
 
 # --- OS / editors ---
 .DS_Store

@@ -81,7 +81,6 @@ retailops/
 ├── artifacts/        Local model registry versions (git-ignored)
 ├── infra/            Terraform modules and environment compositions
 ├── data/             Local raw/processed/synthetic/document/review data (git-ignored)
-├── docs/             Architecture notes and ADRs
 ├── scripts/          Developer scripts
 ├── docker-compose.yml
 ├── Makefile
@@ -99,9 +98,7 @@ make dev        # API (:8000) and web (:3000)
 ```
 
 `make demo` is safe to re-run and does not require editing the database by
-hand. Details are in
-[the local runtime note](docs/architecture/local-runtime.md) and
-[the demo walkthrough](docs/architecture/local-demo.md).
+hand.
 
 The optional full Compose stack (`make stack-up`) runs PostgreSQL, the API and
 the web app in containers. Day-to-day work still uses `make ready` and
@@ -190,10 +187,6 @@ Data lives in the named volume `retailops_postgres_data` and survives restarts.
 
 ## Retail domain model
 
-The catalog and sales schema is documented in
-[the ER model note](docs/architecture/retail-domain-er-model.md), with the
-modelling rationale in [ADR-002](docs/adr/ADR-002-core-retail-domain-model.md).
-
 | Entity | Table | Purpose |
 | ------ | ----- | ------- |
 | Category | `categories` | Merchandise hierarchy (self-referencing tree) |
@@ -225,9 +218,7 @@ running it repeatedly neither duplicates nor disturbs existing rows.
 `make synthetic` is the one command that regenerates the development dataset:
 it writes CSV files under `data/synthetic/`, validates them, and upserts the
 catalog and daily sales into the configured database. Re-running it is safe.
-The same seed and configuration always produce the same checksum. The file
-contract (columns, keys, units, date and decimal formats) is documented in
-[the synthetic dataset note](docs/architecture/synthetic-retail-dataset.md).
+The same seed and configuration always produce the same checksum.
 
 ## Forecast evaluation
 
@@ -254,9 +245,7 @@ zero, WAPE is `0` if every prediction is also zero and `1` otherwise.
 
 `make forecast` rebuilds the development history in memory, walks the three
 baselines forward, and writes `data/forecasts/benchmark.json`,
-`data/forecasts/benchmark.md` and the weekly frame CSV. Metric definitions
-and the backtest rules are also in
-[the forecasting note](docs/architecture/forecasting-baselines.md).
+`data/forecasts/benchmark.md` and the weekly frame CSV.
 
 Pass `--persist` to store each fold as a `ForecastRun` with its predictions.
 
@@ -285,8 +274,7 @@ not depend on notebook state.
 The registry operations (register, list, get, update approval, get champion)
 are storage-neutral. The local implementation is a directory of versions;
 `SageMakerModelRegistry` implements the same calls with an injected client
-and does not upload artifacts. Details are in
-[the ML forecasting note](docs/architecture/ml-forecasting.md).
+and does not upload artifacts.
 
 ## Supplier document intake
 
@@ -298,8 +286,7 @@ in-file duplicates, then catalog cross-checks (supplier SKU mapped elsewhere,
 EAN already on a product, cost increase vs current term, category mismatch).
 Findings are persisted; the document ends `review_ready` or `parse_failed`.
 Storage is a contract — the local directory is one implementation;
-`S3DocumentStorage` is the object-store adapter. Details are in
-[the intake note](docs/architecture/supplier-document-intake.md).
+`S3DocumentStorage` is the object-store adapter.
 
 ## Procurement and reconciliation
 
@@ -308,8 +295,7 @@ Purchase orders, goods receipts and supplier invoices are first-class rows.
 that belong to that order, matches lines without guessing, compares ordered /
 received / invoiced quantities and PO vs invoice cost, and persists a
 versioned run plus exceptions. Tolerances default to zero. Re-running the
-same documents and tolerances returns the existing run. Details are in
-[the procurement note](docs/architecture/procurement-reconciliation.md).
+same documents and tolerances returns the existing run.
 
 ## AI review
 
@@ -337,8 +323,7 @@ confidence ≥ 0.85, low risk, a zero financial impact and an `accept` or
 `make review-eval` runs the mock against the versioned JSONL cases and
 writes `data/reviews/evaluation.json` and `evaluation.md`. Metrics:
 schema validity, classification accuracy, recommended-action accuracy,
-confidence presence and provider failure rate. Details are in
-[the AI review note](docs/architecture/ai-review.md).
+confidence presence and provider failure rate.
 
 ## Human review
 
@@ -364,8 +349,7 @@ review duration when both timestamps exist. `GET /reviews/feedback`
 and `make review-feedback` export decided rows for evaluation (input
 reference, AI result, confidence, decision, correction, prompt and
 model versions). Local reviewer identity is an explicit string; sign-in
-is not implemented. Details are in
-[the human review note](docs/architecture/human-review.md).
+is not implemented.
 
 ## Docker
 
@@ -398,28 +382,6 @@ PostgreSQL by default; the `full` profile adds the API and web services.
 | GET    | `/audit`     | Recent review audit events |
 | GET    | `/search`    | Cross-entity lookup for the operations shell |
 | GET    | `/docs`      | OpenAPI documentation           |
-
-## Architecture decisions
-
-- [Local runtime](docs/architecture/local-runtime.md)
-- [Local demo walkthrough](docs/architecture/local-demo.md)
-- [ADR-001 — Monorepo and Local-First Development Strategy](docs/adr/ADR-001-monorepo-and-local-first-development.md)
-- [ADR-002 — Core Retail Domain Model and Persistence Conventions](docs/adr/ADR-002-core-retail-domain-model.md)
-- [ADR-003 — Synthetic Retail Dataset and Ingestion](docs/adr/ADR-003-synthetic-data-and-ingestion.md)
-- [ADR-004 — Forecast Evaluation and Baselines](docs/adr/ADR-004-forecast-evaluation.md)
-- [ADR-005 — ML Forecasting and Local Model Registry](docs/adr/ADR-005-ml-forecasting-and-model-registry.md)
-- [ADR-006 — Supplier Document Intake and Deterministic Validation](docs/adr/ADR-006-supplier-document-intake.md)
-- [ADR-007 — Procurement Documents and Deterministic Reconciliation](docs/adr/ADR-007-procurement-reconciliation.md)
-- [ADR-008 — AI Review Contracts, Mock Provider and Evaluation](docs/adr/ADR-008-ai-review-contracts.md)
-- [ADR-009 — Human Review, Audit and Feedback](docs/adr/ADR-009-human-review-audit-feedback.md)
-- [ADR-010 — AWS Adapters and Terraform Pre-Deployment](docs/adr/ADR-010-aws-adapters-and-terraform.md)
-- [ADR-011 — AWS Foundation and Remote Terraform State](docs/adr/ADR-011-aws-foundation-and-remote-state.md)
-- [AWS adapters](docs/architecture/aws-adapters.md)
-- [Human review callback workflow](docs/architecture/human-review-cloud-workflow.md)
-- [IAM and security](docs/architecture/iam-security.md)
-- [Cloud readiness](docs/runbooks/cloud-readiness.md)
-- [AWS foundation](docs/runbooks/aws-foundation.md)
-- [Terraform](infra/README.md)
 
 ## Security baseline
 

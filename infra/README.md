@@ -107,11 +107,3 @@ make check-infra
 That runs `terraform fmt -check -recursive` and `terraform validate`
 in bootstrap and each environment after `terraform init -backend=false`.
 It does not run plan or apply.
-
-## Related notes
-
-- [AWS foundation](../docs/runbooks/aws-foundation.md)
-- [Cloud readiness](../docs/runbooks/cloud-readiness.md)
-- [IAM and security](../docs/architecture/iam-security.md)
-- [AWS adapters](../docs/architecture/aws-adapters.md)
-- [ADR-011](../docs/adr/ADR-011-aws-foundation-and-remote-state.md)

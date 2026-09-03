@@ -4,8 +4,6 @@ Creates review cases, immutable AI snapshots, human decisions and an
 append-only audit log. A case links to one document finding or one
 reconciliation exception.
 
-See docs/adr/ADR-009-human-review-audit-feedback.md for the modelling decisions.
-
 Revision ID: a9c4e18f7b21
 Revises: e8b1c03d4a29
 Create Date: 2026-08-30 17:30:00.000000
