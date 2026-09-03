@@ -3,7 +3,8 @@
 from __future__ import annotations
 
 import json
-from collections.abc import Sequence
+import time
+from collections.abc import Iterable, Sequence
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from decimal import Decimal
@@ -15,6 +16,7 @@ from retailops_api.review.dataset import EvalCase, EvaluationDataset
 from retailops_api.review.routing import RoutingDecision, route, route_from_attributes
 from retailops_api.review.schemas import ReviewResult
 from retailops_api.review.types import ReviewType
+from retailops_api.review.usage import ProviderUsage
 
 EVALUATION_JSON = "evaluation.json"
 EVALUATION_MARKDOWN = "evaluation.md"
@@ -34,6 +36,9 @@ class CaseScore:
     routing: RoutingDecision | None
     result: ReviewResult | None
     error: str | None
+    latency_ms: float | None = None
+    input_tokens: int | None = None
+    output_tokens: int | None = None
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -48,6 +53,9 @@ class CaseScore:
             "observed_outcome": self.observed_outcome,
             "routing": self.routing.to_dict() if self.routing else None,
             "error": self.error,
+            "latency_ms": self.latency_ms,
+            "input_tokens": self.input_tokens,
+            "output_tokens": self.output_tokens,
         }
 
 
@@ -78,12 +86,24 @@ class EvaluationReport:
     generated_at: datetime
     metrics: EvaluationMetrics
     scores: tuple[CaseScore, ...]
+    model_id: str | None = None
+    region: str | None = None
+    prompt_versions: tuple[str, ...] = ()
+    mean_latency_ms: float | None = None
+    input_tokens: int | None = None
+    output_tokens: int | None = None
 
     def to_dict(self) -> dict[str, Any]:
         return {
             "dataset_version": self.dataset_version,
             "reviewer": self.reviewer,
             "generated_at": self.generated_at.isoformat(),
+            "model_id": self.model_id,
+            "region": self.region,
+            "prompt_versions": list(self.prompt_versions),
+            "mean_latency_ms": self.mean_latency_ms,
+            "input_tokens": self.input_tokens,
+            "output_tokens": self.output_tokens,
             "metrics": self.metrics.to_dict(),
             "cases": [score.to_dict() for score in self.scores],
         }
@@ -94,14 +114,32 @@ def evaluate(
     dataset: EvaluationDataset,
     *,
     generated_at: datetime | None = None,
+    region: str | None = None,
+    model_id: str | None = None,
 ) -> EvaluationReport:
     scores = tuple(score_case(reviewer, case) for case in dataset.cases)
+    latencies = [item.latency_ms for item in scores if item.latency_ms is not None]
+    prompt_versions = tuple(
+        sorted(
+            {
+                score.result.prompt_version
+                for score in scores
+                if score.result is not None and score.result.prompt_version
+            }
+        )
+    )
     return EvaluationReport(
         dataset_version=dataset.version,
         reviewer=reviewer.provider_id,
         generated_at=generated_at or datetime.now(UTC),
         metrics=summarize(scores),
         scores=scores,
+        model_id=model_id or _reviewer_model(reviewer),
+        region=region,
+        prompt_versions=prompt_versions,
+        mean_latency_ms=round(sum(latencies) / len(latencies), 2) if latencies else None,
+        input_tokens=_sum_optional(score.input_tokens for score in scores),
+        output_tokens=_sum_optional(score.output_tokens for score in scores),
     )
 
 
@@ -140,12 +178,60 @@ def summarize(scores: Sequence[CaseScore]) -> EvaluationMetrics:
     )
 
 
-def write_evaluation(report: EvaluationReport, directory: Path) -> None:
-    directory.mkdir(parents=True, exist_ok=True)
-    (directory / EVALUATION_JSON).write_text(
+def stamped_output_dir(base: Path, report: EvaluationReport) -> Path:
+    stamp = report.generated_at.strftime("%Y%m%dT%H%M%SZ")
+    return base / f"{report.reviewer}-{report.dataset_version}-{stamp}"
+
+
+def write_evaluation(report: EvaluationReport, directory: Path, *, stamp: bool = False) -> Path:
+    target = stamped_output_dir(directory, report) if stamp else directory
+    target.mkdir(parents=True, exist_ok=True)
+    (target / EVALUATION_JSON).write_text(
         json.dumps(report.to_dict(), indent=2, sort_keys=True) + "\n", encoding="utf-8"
     )
-    (directory / EVALUATION_MARKDOWN).write_text(render_markdown(report), encoding="utf-8")
+    (target / EVALUATION_MARKDOWN).write_text(render_markdown(report), encoding="utf-8")
+    return target
+
+
+def write_comparison(
+    mock_report: EvaluationReport,
+    live_report: EvaluationReport,
+    directory: Path,
+) -> Path:
+    directory.mkdir(parents=True, exist_ok=True)
+    payload = {
+        "generated_at": datetime.now(UTC).isoformat(),
+        "dataset_version": mock_report.dataset_version,
+        "mock": mock_report.to_dict(),
+        "live": live_report.to_dict(),
+    }
+    path = directory / "comparison.json"
+    path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    mock_m = mock_report.metrics
+    live_m = live_report.metrics
+    markdown = [
+        "# Provider comparison",
+        "",
+        f"- **Dataset:** `{mock_report.dataset_version}`",
+        f"- **Mock:** `{mock_report.reviewer}`",
+        f"- **Live:** `{live_report.reviewer}` model `{live_report.model_id or '—'}`",
+        f"- **Region:** `{live_report.region or '—'}`",
+        "",
+        "| Metric | Mock | Live |",
+        "| --- | ---: | ---: |",
+        _metric_row("Schema validity", mock_m.schema_validity, live_m.schema_validity),
+        _metric_row(
+            "Classification", mock_m.classification_accuracy, live_m.classification_accuracy
+        ),
+        _metric_row(
+            "Action", mock_m.recommended_action_accuracy, live_m.recommended_action_accuracy
+        ),
+        _metric_row("Confidence", mock_m.confidence_presence, live_m.confidence_presence),
+        _metric_row("Provider failure", mock_m.provider_failure_rate, live_m.provider_failure_rate),
+        "",
+    ]
+    (directory / "comparison.md").write_text("\n".join(markdown), encoding="utf-8")
+    return path
 
 
 def render_markdown(report: EvaluationReport) -> str:
@@ -156,7 +242,12 @@ def render_markdown(report: EvaluationReport) -> str:
         f"- **Dataset:** `{report.dataset_version}`",
         f"- **Reviewer:** `{report.reviewer}`",
         f"- **Generated:** {report.generated_at.isoformat()}",
+        f"- **Model:** `{report.model_id or '—'}`",
+        f"- **Region:** `{report.region or '—'}`",
+        f"- **Prompt versions:** {_prompt_version_label(report)}",
         f"- **Cases:** {metrics.case_count}",
+        f"- **Mean latency (ms):** {_latency_label(report)}",
+        f"- **Tokens in/out:** {report.input_tokens or 0}/{report.output_tokens or 0}",
         "",
         "## Metrics",
         "",
@@ -191,7 +282,10 @@ def _score_review(reviewer: AIReviewer, case: EvalCase) -> CaseScore:
     if case.review_type is None or case.payload is None:
         raise ValueError(f"review case {case.id!r} is missing a payload")
     request = build_request(case.review_type, case.payload, case_id=case.id)
+    started = time.perf_counter()
     attempt = review_safely(reviewer, request)
+    latency_ms = round((time.perf_counter() - started) * 1000, 2)
+    usage = _reviewer_usage(reviewer)
     observed = _observed_outcome(attempt)
     result = attempt.result
     routing = None
@@ -215,6 +309,9 @@ def _score_review(reviewer: AIReviewer, case: EvalCase) -> CaseScore:
         routing=routing,
         result=result,
         error=str(attempt.error) if attempt.error else None,
+        latency_ms=latency_ms,
+        input_tokens=usage.input_tokens if usage else None,
+        output_tokens=usage.output_tokens if usage else None,
     )
 
 
@@ -283,6 +380,39 @@ def _impact(case: EvalCase) -> Decimal:
     if payload is not None and hasattr(payload, "financial_impact"):
         return payload.financial_impact
     return Decimal("0")
+
+
+def _metric_row(name: str, mock_value: float, live_value: float) -> str:
+    return f"| {name} | {mock_value:.4f} | {live_value:.4f} |"
+
+
+def _prompt_version_label(report: EvaluationReport) -> str:
+    if not report.prompt_versions:
+        return "—"
+    return ", ".join(f"`{item}`" for item in report.prompt_versions)
+
+
+def _latency_label(report: EvaluationReport) -> str:
+    if report.mean_latency_ms is None:
+        return "—"
+    return str(report.mean_latency_ms)
+
+
+def _reviewer_usage(reviewer: AIReviewer) -> ProviderUsage | None:
+    usage = getattr(reviewer, "last_usage", None)
+    return usage if isinstance(usage, ProviderUsage) else None
+
+
+def _reviewer_model(reviewer: AIReviewer) -> str | None:
+    model = getattr(reviewer, "model_id", None)
+    return str(model) if model else None
+
+
+def _sum_optional(values: Iterable[int | None]) -> int | None:
+    found = [int(item) for item in values if item is not None]
+    if not found:
+        return None
+    return sum(found)
 
 
 def _ratio(numerator: int, denominator: int) -> float:

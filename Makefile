@@ -7,7 +7,7 @@ NPM := npm --prefix $(WEB_DIR)
 .PHONY: help setup env ready demo check check-app check-infra ml-smoke perf \
         dev api web db-up db-down db-logs db-shell migrate migration \
         autogenerate db-reset seed synthetic forecast train documents reconcile \
-        review-eval reviews review-feedback \
+        review-eval reviews review-feedback aws-smoke \
         test test-api test-web lint lint-api lint-web format format-check typecheck \
         tf-fmt-check tf-validate secrets-scan \
         build docker-build stack-up stack-down clean
@@ -95,6 +95,9 @@ perf: ## Time generate, ingest, train, reconciliation and the review queue (tiny
 
 ml-smoke: ## Score the mock reviewer on the versioned evaluation cases
 	@$(MAKE) review-eval
+
+aws-smoke: ## Opt-in live S3/Textract/Bedrock smoke (not part of check-app)
+	cd $(API_DIR) && uv run retailops-aws-smoke preflight
 
 check-app: format-check lint typecheck test build ml-smoke ## App quality without images
 

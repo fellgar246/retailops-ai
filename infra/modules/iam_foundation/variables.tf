@@ -34,6 +34,30 @@ variable "model_artifact_prefix" {
   default     = "models"
 }
 
+variable "document_object_prefixes" {
+  type        = list(string)
+  description = "S3 key prefixes the document-processor role may read and write."
+  default     = ["supplier-documents", "block13", "documents"]
+}
+
+variable "bedrock_model_id" {
+  type        = string
+  description = "Bedrock foundation-model id the API task role may invoke."
+  default     = "anthropic.claude-haiku-4-5-20251001-v1:0"
+}
+
+variable "bedrock_inference_profile_id" {
+  type        = string
+  description = "Cross-region inference profile used as the Converse model id."
+  default     = "us.anthropic.claude-haiku-4-5-20251001-v1:0"
+}
+
+variable "bedrock_inference_destination_regions" {
+  type        = list(string)
+  description = "Regions the US inference profile may route to."
+  default     = ["us-east-1", "us-east-2", "us-west-2"]
+}
+
 variable "tags" {
   type        = map(string)
   description = "Tags applied to IAM roles."

@@ -13,7 +13,9 @@ import csv
 import io
 from collections.abc import Sequence
 from decimal import Decimal, InvalidOperation
+from typing import Protocol
 
+from retailops_api.core.limits import DocumentBounds
 from retailops_api.documents.schema import (
     DECIMAL_COLUMNS,
     INTEGER_COLUMNS,
@@ -28,12 +30,35 @@ from retailops_api.documents.types import ParseError, ParseIssue, ParseResult, S
 CSV_MEDIA_TYPE = "text/csv"
 XLSX_MEDIA_TYPE = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
 PDF_MEDIA_TYPE = "application/pdf"
+PNG_MEDIA_TYPE = "image/png"
+JPEG_MEDIA_TYPE = "image/jpeg"
+TIFF_MEDIA_TYPE = "image/tiff"
+
+IMAGE_MEDIA_TYPES = frozenset({PNG_MEDIA_TYPE, JPEG_MEDIA_TYPE, TIFF_MEDIA_TYPE})
+TEXTRACT_MEDIA_TYPES = frozenset({PDF_MEDIA_TYPE}) | IMAGE_MEDIA_TYPES
 
 MEDIA_TYPES_BY_SUFFIX = {
     ".csv": CSV_MEDIA_TYPE,
     ".xlsx": XLSX_MEDIA_TYPE,
     ".pdf": PDF_MEDIA_TYPE,
+    ".png": PNG_MEDIA_TYPE,
+    ".jpg": JPEG_MEDIA_TYPE,
+    ".jpeg": JPEG_MEDIA_TYPE,
+    ".tif": TIFF_MEDIA_TYPE,
+    ".tiff": TIFF_MEDIA_TYPE,
 }
+
+
+class SheetAnalyzer(Protocol):
+    """Hosted document analysis. Implementations must not assume a vendor."""
+
+    def analyze(
+        self,
+        data: bytes,
+        *,
+        media_type: str = "application/pdf",
+        filename: str = "document",
+    ) -> ParseResult: ...
 
 
 def detect_media_type(filename: str, media_type: str | None = None) -> str:
@@ -62,17 +87,31 @@ def parse_supplier_sheet(
     *,
     media_type: str,
     filename: str = "document",
+    analyzer: SheetAnalyzer | None = None,
+    bounds: DocumentBounds | None = None,
 ) -> ParseResult:
-    """Dispatch on media type. Image-only PDFs are not handled here."""
+    """Dispatch on media type. CSV/XLSX stay local; PDF/image may use Textract."""
     if not data:
         raise ParseError(
             "document is empty",
             issues=[ParseIssue(code="empty_document", message="document is empty")],
         )
+    if bounds is not None and len(data) > bounds.max_upload_bytes:
+        raise ParseError(
+            f"{filename} exceeds max upload size ({bounds.max_upload_bytes} bytes)",
+            issues=[
+                ParseIssue(
+                    code="document_too_large",
+                    message=f"document exceeds {bounds.max_upload_bytes} bytes",
+                )
+            ],
+        )
     if media_type == CSV_MEDIA_TYPE:
         return parse_csv(data)
     if media_type == XLSX_MEDIA_TYPE:
         return parse_xlsx(data)
+    if analyzer is not None and media_type in TEXTRACT_MEDIA_TYPES:
+        return analyzer.analyze(data, media_type=media_type, filename=filename)
     if media_type == PDF_MEDIA_TYPE:
         from retailops_api.documents.pdf import parse_text_pdf
 

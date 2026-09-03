@@ -56,6 +56,23 @@ data "aws_iam_policy_document" "ecs_execution" {
   }
 }
 
+locals {
+  document_object_arns = [
+    for prefix in var.document_object_prefixes :
+    "${var.documents_bucket_arn}/${prefix}/*"
+  ]
+  bedrock_invoke_resources = concat(
+    [
+      "arn:aws:bedrock:${var.aws_region}::foundation-model/${var.bedrock_model_id}",
+      "arn:aws:bedrock:${var.aws_region}:${var.account_id}:inference-profile/${var.bedrock_inference_profile_id}"
+    ],
+    [
+      for region in var.bedrock_inference_destination_regions :
+      "arn:aws:bedrock:${region}::foundation-model/${var.bedrock_model_id}"
+    ]
+  )
+}
+
 data "aws_iam_policy_document" "api_task" {
   statement {
     sid       = "DocumentsObjectAccess"
@@ -67,6 +84,12 @@ data "aws_iam_policy_document" "api_task" {
     sid       = "DocumentsListBucket"
     actions   = ["s3:ListBucket", "s3:HeadBucket"]
     resources = [var.documents_bucket_arn]
+  }
+
+  statement {
+    sid       = "BedrockInvoke"
+    actions   = ["bedrock:InvokeModel"]
+    resources = local.bedrock_invoke_resources
   }
 
   dynamic "statement" {
@@ -82,14 +105,25 @@ data "aws_iam_policy_document" "api_task" {
 data "aws_iam_policy_document" "document_processor" {
   statement {
     sid       = "ReadWriteDocuments"
-    actions   = ["s3:GetObject", "s3:PutObject"]
-    resources = ["${var.documents_bucket_arn}/*"]
+    actions   = ["s3:GetObject", "s3:PutObject", "s3:HeadObject"]
+    resources = local.document_object_arns
   }
 
   statement {
     sid       = "ListDocuments"
     actions   = ["s3:ListBucket"]
     resources = [var.documents_bucket_arn]
+    condition {
+      test     = "StringLike"
+      variable = "s3:prefix"
+      values   = [for prefix in var.document_object_prefixes : "${prefix}/*"]
+    }
+  }
+
+  statement {
+    sid       = "TextractAnalyze"
+    actions   = ["textract:AnalyzeDocument", "textract:DetectDocumentText"]
+    resources = ["*"]
   }
 }
 

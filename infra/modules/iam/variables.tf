@@ -33,6 +33,18 @@ variable "bedrock_model_id" {
   description = "Bedrock foundation-model id the API may invoke."
 }
 
+variable "bedrock_inference_profile_id" {
+  type        = string
+  description = "Optional inference profile the API may invoke."
+  default     = ""
+}
+
+variable "bedrock_inference_destination_regions" {
+  type        = list(string)
+  description = "Regions a geo inference profile may route to."
+  default     = ["us-east-1", "us-east-2", "us-west-2"]
+}
+
 variable "sagemaker_model_package_group_arn" {
   type        = string
   description = "Model package group ARN for registry writes."

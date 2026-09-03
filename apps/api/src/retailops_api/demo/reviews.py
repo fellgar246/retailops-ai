@@ -5,10 +5,13 @@ from __future__ import annotations
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from retailops_api.core.adapters import ai_reviewer_for
+from retailops_api.core.config import get_settings
 from retailops_api.documents.types import ProcessResult
 from retailops_api.domain.models import DocumentFinding, ReconciliationException, ReviewCase
 from retailops_api.procurement.types import ReconciliationResult
-from retailops_api.review.mock import MockAIReviewer, canned_output
+from retailops_api.review.contract import AIReviewer
+from retailops_api.review.mock import canned_output
 from retailops_api.review.persist import create_review_case
 from retailops_api.review.reconciliation import explain_exception
 from retailops_api.review.schemas import parse_review_result
@@ -20,13 +23,14 @@ def open_demo_reviews(
     session: Session,
     documents: list[ProcessResult],
     reconciliations: list[ReconciliationResult],
+    reviewer: AIReviewer | None = None,
 ) -> list[ReviewCase]:
-    """Attach mock-AI snapshots and open a case for each material finding or exception."""
+    """Attach AI snapshots and open a case for each material finding or exception."""
 
-    reviewer = MockAIReviewer()
+    selected = reviewer if reviewer is not None else ai_reviewer_for(get_settings())
     cases: list[ReviewCase] = []
-    cases.extend(_cases_for_documents(session, documents, reviewer))
-    cases.extend(_cases_for_reconciliations(session, reconciliations, reviewer))
+    cases.extend(_cases_for_documents(session, documents, selected))
+    cases.extend(_cases_for_reconciliations(session, reconciliations, selected))
     session.flush()
     return cases
 
@@ -34,7 +38,7 @@ def open_demo_reviews(
 def _cases_for_documents(
     session: Session,
     documents: list[ProcessResult],
-    reviewer: MockAIReviewer,
+    reviewer: AIReviewer,
 ) -> list[ReviewCase]:
     cases: list[ReviewCase] = []
     for document in documents:
@@ -54,7 +58,7 @@ def _cases_for_documents(
 def _cases_for_reconciliations(
     session: Session,
     reconciliations: list[ReconciliationResult],
-    reviewer: MockAIReviewer,
+    reviewer: AIReviewer,
 ) -> list[ReviewCase]:
     cases: list[ReviewCase] = []
     for run in reconciliations:

@@ -130,3 +130,22 @@ def test_unknown_supplier_does_not_store_bytes(session: Session, tmp_path: Path)
         )
 
     assert list(tmp_path.iterdir()) == []
+
+
+def test_pdf_intake_can_use_an_injected_analyzer(session: Session, tmp_path: Path) -> None:
+    from retailops_api.documents.textract import TextractDocumentAnalyzer
+    from retailops_api.documents.textract_corpus import synthetic_textract_table
+    from tests.aws_fakes import FakeTextract
+
+    seed_reference_data(session)
+    analyzer = TextractDocumentAnalyzer(FakeTextract(synthetic_textract_table(VALID_ROWS[:1])))
+    result = process_document(
+        session,
+        LocalDocumentStorage(tmp_path),
+        supplier_code="SUP-BEVCO",
+        filename="offer.pdf",
+        data=b"%PDF-fixture",
+        analyzer=analyzer,
+    )
+    assert result.status == DocumentStatus.review_ready.value
+    assert result.row_count == 1

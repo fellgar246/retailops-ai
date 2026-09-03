@@ -5,10 +5,10 @@ infrastructure those adapters would run on. Local development commands
 never plan or apply. `make check-infra` only formats and validates.
 
 Only the `dev` foundation is applied. It creates remote state, a VPC,
-IAM roles, the documents bucket, ECR repositories, Secrets Manager
-containers and a monthly budget. It does **not** create ECS services,
-RDS, Step Functions, SageMaker model groups, or public application
-traffic.
+IAM roles (including least-privilege Textract and Bedrock), the
+documents bucket, ECR repositories, Secrets Manager containers and a
+monthly budget. It does **not** create ECS services, RDS, Step
+Functions, SageMaker model groups, or public application traffic.
 
 `staging` and `prod` remain full-stack placeholders and must not be
 applied.

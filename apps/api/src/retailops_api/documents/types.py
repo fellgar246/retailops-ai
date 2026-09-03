@@ -88,12 +88,29 @@ class SupplierSheetRow:
     minimum_order_quantity: int | None = None
     lead_time_days: int | None = None
     invalid_fields: frozenset[str] = field(default_factory=frozenset)
+    page: int | None = None
+    confidence: float | None = None
+
+
+@dataclass(frozen=True)
+class ExtractionMeta:
+    """Provenance for a parse. Missing numbers stay ``None``; nothing is invented."""
+
+    analyzer: str = "local"
+    page_count: int | None = None
+    table_count: int = 0
+    line_count: int = 0
+    form_count: int = 0
+    min_confidence: float | None = None
+    max_confidence: float | None = None
+    ambiguous: bool = False
 
 
 @dataclass(frozen=True)
 class ParseResult:
     rows: tuple[SupplierSheetRow, ...]
     issues: tuple[ParseIssue, ...] = ()
+    extraction: ExtractionMeta | None = None
 
 
 @dataclass(frozen=True)

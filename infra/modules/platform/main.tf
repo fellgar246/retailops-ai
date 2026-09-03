@@ -64,6 +64,7 @@ module "iam" {
   documents_queue_arn               = module.messaging.documents_queue_arn
   review_callbacks_queue_arn        = module.messaging.review_callbacks_queue_arn
   bedrock_model_id                  = var.bedrock_model_id
+  bedrock_inference_profile_id      = var.bedrock_inference_profile_id
   sagemaker_model_package_group_arn = module.registry.model_package_group_arn
   api_log_group_arn                 = module.logs.api_log_group_arn
   web_log_group_arn                 = module.logs.web_log_group_arn

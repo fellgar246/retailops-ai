@@ -1,6 +1,8 @@
 # Copy to terraform.tfvars (git-ignored) or export TF_VAR_* values.
 # Do not put live passwords, access keys, session tokens or secret values here.
 
-account_id            = "000000000000"
-documents_bucket_name = "retailops-ai-dev-documents-000000000000"
-budget_alert_email    = ""
+account_id                     = "000000000000"
+documents_bucket_name          = "retailops-ai-dev-documents-000000000000"
+budget_alert_email             = ""
+bedrock_model_id               = "anthropic.claude-haiku-4-5-20251001-v1:0"
+bedrock_inference_profile_id   = "us.anthropic.claude-haiku-4-5-20251001-v1:0"

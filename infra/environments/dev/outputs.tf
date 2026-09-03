@@ -82,3 +82,11 @@ output "secret_names" {
 output "budget_name" {
   value = module.foundation.budget_name
 }
+
+output "bedrock_model_id" {
+  value = module.foundation.bedrock_model_id
+}
+
+output "bedrock_inference_profile_id" {
+  value = module.foundation.bedrock_inference_profile_id
+}

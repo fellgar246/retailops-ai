@@ -66,12 +66,27 @@ class FakeS3:
 
 
 class FakeTextract:
-    def __init__(self, response: dict[str, Any]) -> None:
-        self.response = response
+    def __init__(
+        self,
+        response: dict[str, Any] | None = None,
+        *,
+        error: Exception | None = None,
+        fail_times: int = 0,
+        fail_error: Exception | None = None,
+    ) -> None:
+        self.response = response or {"Blocks": []}
+        self.error = error
+        self.fail_times = fail_times
+        self.fail_error = fail_error
         self.calls: list[dict[str, Any]] = []
 
     def analyze_document(self, **kwargs: Any) -> dict[str, Any]:
         self.calls.append(kwargs)
+        if self.error is not None:
+            raise self.error
+        if self.fail_times > 0:
+            self.fail_times -= 1
+            raise self.fail_error or FakeClientError("ThrottlingException")
         return self.response
 
 
@@ -92,13 +107,31 @@ class FakeBedrock:
         self.wrap_in_content = wrap_in_content
         self.calls: list[dict[str, Any]] = []
 
-    def invoke_model(self, **kwargs: Any) -> dict[str, Any]:
-        self.calls.append(kwargs)
+    def _maybe_fail(self) -> None:
         if self.error is not None:
             raise self.error
         if self.fail_times > 0:
             self.fail_times -= 1
             raise self.fail_error or FakeClientError("ThrottlingException")
+
+    def converse(self, **kwargs: Any) -> dict[str, Any]:
+        self.calls.append(kwargs)
+        self._maybe_fail()
+        content: list[dict[str, Any]]
+        if self.wrap_in_content and isinstance(self.payload, dict):
+            content = [{"toolUse": {"name": "submit_review_result", "input": self.payload}}]
+        else:
+            content = [{"text": json.dumps(self.payload)}]
+        return {
+            "output": {"message": {"role": "assistant", "content": content}},
+            "usage": {"inputTokens": 12, "outputTokens": 34, "totalTokens": 46},
+            "metrics": {"latencyMs": 9},
+            "stopReason": "tool_use",
+        }
+
+    def invoke_model(self, **kwargs: Any) -> dict[str, Any]:
+        self.calls.append(kwargs)
+        self._maybe_fail()
         body: object
         if self.wrap_in_content:
             text = json.dumps(self.payload)

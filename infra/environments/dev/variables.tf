@@ -60,3 +60,15 @@ variable "budget_time_period_start" {
   description = "Budget start in AWS format YYYY-MM-DD_HH:MM."
   default     = "2026-09-01_00:00"
 }
+
+variable "bedrock_model_id" {
+  type        = string
+  description = "Bedrock foundation-model id the API task role may invoke."
+  default     = "anthropic.claude-haiku-4-5-20251001-v1:0"
+}
+
+variable "bedrock_inference_profile_id" {
+  type        = string
+  description = "Cross-region inference profile used as the Converse model id."
+  default     = "us.anthropic.claude-haiku-4-5-20251001-v1:0"
+}

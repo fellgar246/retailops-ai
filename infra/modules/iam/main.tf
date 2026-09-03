@@ -18,6 +18,20 @@ data "aws_iam_policy_document" "sfn_assume" {
   }
 }
 
+locals {
+  bedrock_foundation_arns = concat(
+    ["arn:aws:bedrock:${var.aws_region}::foundation-model/${var.bedrock_model_id}"],
+    [
+      for region in var.bedrock_inference_destination_regions :
+      "arn:aws:bedrock:${region}::foundation-model/${var.bedrock_model_id}"
+    ]
+  )
+  bedrock_profile_arns = var.bedrock_inference_profile_id == "" ? [] : [
+    "arn:aws:bedrock:${var.aws_region}:${var.account_id}:inference-profile/${var.bedrock_inference_profile_id}"
+  ]
+  bedrock_invoke_resources = concat(local.bedrock_foundation_arns, local.bedrock_profile_arns)
+}
+
 resource "aws_iam_role" "ecs_execution" {
   name               = "${var.name_prefix}-ecs-execution"
   assume_role_policy = data.aws_iam_policy_document.ecs_tasks_assume.json
@@ -99,7 +113,7 @@ resource "aws_iam_role_policy" "api_task" {
         Sid      = "BedrockInvoke"
         Effect   = "Allow"
         Action   = ["bedrock:InvokeModel"]
-        Resource = ["arn:aws:bedrock:${var.aws_region}::foundation-model/${var.bedrock_model_id}"]
+        Resource = local.bedrock_invoke_resources
       },
       {
         Sid      = "TextractAnalyze"

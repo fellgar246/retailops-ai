@@ -90,3 +90,11 @@ output "secret_ids" {
 output "budget_name" {
   value = module.budget.budget_name
 }
+
+output "bedrock_model_id" {
+  value = var.bedrock_model_id
+}
+
+output "bedrock_inference_profile_id" {
+  value = var.bedrock_inference_profile_id
+}

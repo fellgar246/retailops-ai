@@ -6,7 +6,7 @@ Retail operations intelligence platform. This repository currently contains:
 - **The core retail domain** — the product catalog (categories, products, suppliers, supplier terms, stores) and the daily sales-history model, with migrations, data-access helpers, development seed data and a deterministic synthetic history generator.
 - **Forecast evaluation** — a weekly category-demand frame, time-based splits, naive / seasonal-naive / moving-average baselines, walk-forward backtesting, and persisted forecast runs.
 - **ML forecasting** — calendar, lag and rolling features, a histogram gradient-boosted demand model, champion/challenger promotion, and a local filesystem model registry.
-- **Supplier document intake** — store a CSV, XLSX or text PDF locally, parse it onto a canonical offer sheet, run deterministic validation against the catalog, and persist findings.
+- **Supplier document intake** — store a CSV, XLSX or PDF, parse it onto a canonical offer sheet (Textract for scanned PDF/image when AWS is enabled), run deterministic validation against the catalog, and persist findings.
 - **Procurement and reconciliation** — persist purchase orders, goods receipts and supplier invoices, then run a deterministic three-way match with explicit tolerances.
 - **AI review contracts** — a provider-neutral reviewer, structured and validated outputs, a fixture mock, conservative routing to human review, and a versioned evaluation harness.
 - **Human review** — persisted cases on document findings and reconciliation exceptions, an immutable AI snapshot, controlled decisions, an append-only audit log, a feedback export and a metrics API.
@@ -59,11 +59,14 @@ Configuration lives in environment variables. `make setup` copies
 | `AWS_ENVIRONMENT_NAME`     | Name segment for `{prefix}-{environment}-…` resources |
 | `AWS_RESOURCE_PREFIX`      | Shared resource prefix (default `retailops`) |
 | `AWS_DOCUMENTS_BUCKET`     | Object-store bucket when S3 storage is enabled |
-| `AWS_DOCUMENTS_PREFIX`     | Object key prefix (default `documents`) |
-| `AWS_BEDROCK_MODEL_ID`     | Bedrock model id when the hosted reviewer is enabled |
+| `AWS_DOCUMENTS_PREFIX`     | Object key prefix (default `supplier-documents`) |
+| `AWS_BEDROCK_MODEL_ID`     | Bedrock foundation-model id when the hosted reviewer is enabled |
+| `BEDROCK_INFERENCE_PROFILE_ID` | Preferred Converse model id (Haiku 4.5 US profile) |
+| `BEDROCK_ENABLED`          | Alias of `AWS_USE_BEDROCK` |
+| `BEDROCK_MAX_TOKENS`       | Max Bedrock output tokens (default `1024`) |
 | `AWS_SAGEMAKER_MODEL_GROUP` | Model package group name |
 | `AWS_USE_S3_STORAGE`       | Use S3 document storage (requires `AWS_ENABLED`) |
-| `AWS_USE_TEXTRACT`         | Reserved for hosted sheet analysis |
+| `AWS_USE_TEXTRACT`         | Use Textract for PDF/image sheets (requires `AWS_ENABLED`) |
 | `AWS_USE_BEDROCK`          | Use the Bedrock reviewer (requires `AWS_ENABLED`) |
 | `AWS_USE_SAGEMAKER_REGISTRY` | Use the SageMaker registry (requires `AWS_ENABLED`) |
 

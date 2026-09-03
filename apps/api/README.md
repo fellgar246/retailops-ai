@@ -17,6 +17,7 @@ uv run retailops-train        # train the demand model, evaluate it and register
 uv run retailops-documents    # store, parse and validate a supplier sheet
 uv run retailops-reconcile    # three-way match a purchase order or invoice
 uv run retailops-review-eval  # score the mock reviewer and write an evaluation report
+uv run retailops-aws-smoke    # opt-in live S3 / Textract / Bedrock smoke (AWS credentials)
 uv run retailops-review queue # list the human review queue
 ```
 

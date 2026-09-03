@@ -122,6 +122,12 @@ variable "bedrock_model_id" {
   description = "Bedrock model id the API task role may invoke."
 }
 
+variable "bedrock_inference_profile_id" {
+  type        = string
+  description = "Optional Bedrock inference profile the API task role may invoke."
+  default     = ""
+}
+
 variable "sagemaker_model_group" {
   type        = string
   description = "SageMaker model package group name."

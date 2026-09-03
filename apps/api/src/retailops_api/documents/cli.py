@@ -14,7 +14,7 @@ import sys
 from collections.abc import Sequence
 from pathlib import Path
 
-from retailops_api.core.adapters import document_storage_for
+from retailops_api.core.adapters import document_analyzer_for, document_storage_for
 from retailops_api.core.config import get_settings
 from retailops_api.db.session import get_session_factory
 from retailops_api.documents.process import process_document
@@ -31,11 +31,14 @@ def main(argv: Sequence[str] | None = None) -> int:
         return 1
     try:
         data = path.read_bytes()
+        settings = get_settings()
         storage = (
             LocalDocumentStorage(args.storage)
             if args.storage is not None
-            else document_storage_for(get_settings())
+            else document_storage_for(settings)
         )
+        analyzer = document_analyzer_for(settings)
+        bounds = settings.aws_config().document_bounds()
         with get_session_factory()() as session:
             try:
                 result = process_document(
@@ -45,6 +48,8 @@ def main(argv: Sequence[str] | None = None) -> int:
                     filename=path.name,
                     data=data,
                     media_type=args.media_type,
+                    analyzer=analyzer,
+                    bounds=bounds,
                 )
                 session.commit()
             except Exception:
@@ -68,7 +73,12 @@ def _parse_args(argv: Sequence[str] | None) -> argparse.Namespace:
             "against the live catalog and persist findings."
         ),
     )
-    parser.add_argument("--file", required=True, type=Path, help="CSV, XLSX or text PDF.")
+    parser.add_argument(
+        "--file",
+        required=True,
+        type=Path,
+        help="CSV, XLSX, text PDF, or (when Textract is enabled) a scanned PDF/image.",
+    )
     parser.add_argument("--supplier", required=True, help="Supplier business code, e.g. SUP-BEVCO.")
     parser.add_argument(
         "--storage",

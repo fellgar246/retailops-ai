@@ -2,7 +2,12 @@ from pathlib import Path
 
 import pytest
 
-from retailops_api.core.adapters import ai_reviewer_for, document_storage_for, model_registry_for
+from retailops_api.core.adapters import (
+    ai_reviewer_for,
+    document_analyzer_for,
+    document_storage_for,
+    model_registry_for,
+)
 from retailops_api.core.aws import AwsConfig, AwsConfigError
 from retailops_api.core.config import Settings
 from retailops_api.documents.s3 import S3DocumentStorage
@@ -23,6 +28,9 @@ def test_aws_field_defaults_keep_cloud_adapters_off() -> None:
     assert fields["aws_use_sagemaker_registry"].default is False
     assert fields["aws_region"].default == "us-east-1"
     assert fields["aws_resource_prefix"].default == "retailops"
+    assert fields["aws_documents_prefix"].default == "supplier-documents"
+    assert fields["bedrock_max_tokens"].default == 1024
+    assert fields["bedrock_temperature"].default == 0.0
 
 
 def test_aws_config_builds_resource_names() -> None:
@@ -47,6 +55,7 @@ def test_feature_flags_do_nothing_when_aws_is_disabled(tmp_path: Path) -> None:
         document_storage_root=str(tmp_path),
     )
     assert isinstance(document_storage_for(settings), LocalDocumentStorage)
+    assert document_analyzer_for(settings) is None
     assert isinstance(ai_reviewer_for(settings), MockAIReviewer)
     assert isinstance(model_registry_for(settings, root=tmp_path), LocalModelRegistry)
 
@@ -72,7 +81,7 @@ def test_s3_factory_uses_injected_client_when_enabled() -> None:
 
 def test_bedrock_factory_requires_a_model_id() -> None:
     settings = Settings(aws_enabled=True, aws_use_bedrock=True, aws_bedrock_model_id="")
-    with pytest.raises(AwsConfigError, match="aws_bedrock_model_id"):
+    with pytest.raises(AwsConfigError, match="bedrock_model_id"):
         ai_reviewer_for(settings, bedrock=object())
 
 

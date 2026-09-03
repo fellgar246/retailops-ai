@@ -29,6 +29,7 @@ retailops-reconcile = "retailops_api.procurement.cli:main"
 retailops-review-eval = "retailops_api.review.cli:main"
 retailops-review = "retailops_api.review.ops_cli:main"
 retailops-demo = "retailops_api.demo.cli:main"
+retailops-aws-smoke = "retailops_api.ops.live:main"
 
 [dependency-groups]
 dev = [
@@ -56,6 +57,9 @@ packages = ["src/retailops_api"]
 testpaths = ["tests"]
 pythonpath = ["src", "."]
 addopts = "-q"
+markers = [
+    "live_aws: calls live AWS (skipped unless RETAILOPS_LIVE_AWS=1)",
+]
 
 [tool.ruff]
 line-length = 100
@@ -78,5 +82,16 @@ strict = true
 plugins = ["pydantic.mypy"]
 
 [[tool.mypy.overrides]]
-module = ["sklearn.*", "joblib", "openpyxl", "openpyxl.*", "pypdf", "pypdf.*", "boto3", "boto3.*"]
+module = [
+    "sklearn.*",
+    "joblib",
+    "openpyxl",
+    "openpyxl.*",
+    "pypdf",
+    "pypdf.*",
+    "boto3",
+    "boto3.*",
+    "botocore",
+    "botocore.*",
+]
 ignore_missing_imports = true

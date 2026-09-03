@@ -10,11 +10,17 @@ from pathlib import Path
 from typing import Any
 
 from retailops_api.core.aws import AwsConfig
-from retailops_api.core.clients import bedrock_runtime_client, s3_client, sagemaker_client
+from retailops_api.core.clients import (
+    bedrock_runtime_client,
+    s3_client,
+    sagemaker_client,
+    textract_client,
+)
 from retailops_api.core.config import Settings
 from retailops_api.documents.paths import default_document_root
 from retailops_api.documents.s3 import S3DocumentStorage
 from retailops_api.documents.storage import DocumentStorage, LocalDocumentStorage
+from retailops_api.documents.textract import TextractDocumentAnalyzer
 from retailops_api.forecasting.registry import LocalModelRegistry, ModelRegistry
 from retailops_api.forecasting.sagemaker_registry import SageMakerModelRegistry
 from retailops_api.forecasting.sources import default_registry_root
@@ -38,7 +44,21 @@ def document_storage_for(
         client,
         bucket=aws.documents_bucket,
         prefix=aws.documents_prefix,
+        max_upload_bytes=aws.max_upload_bytes,
     )
+
+
+def document_analyzer_for(
+    settings: Settings,
+    *,
+    textract: Any | None = None,
+) -> TextractDocumentAnalyzer | None:
+    aws = settings.aws_config()
+    if not aws.textract_enabled():
+        return None
+    aws.require_textract()
+    client = textract if textract is not None else textract_client(aws.region)
+    return TextractDocumentAnalyzer(client, bounds=aws.document_bounds())
 
 
 def ai_reviewer_for(
@@ -50,8 +70,19 @@ def ai_reviewer_for(
     if not aws.bedrock_enabled():
         return MockAIReviewer()
     aws.require_bedrock()
-    client = bedrock if bedrock is not None else bedrock_runtime_client(aws.region)
-    return BedrockAIReviewer(client, model_id=aws.bedrock_model_id, region=aws.region)
+    client = (
+        bedrock
+        if bedrock is not None
+        else bedrock_runtime_client(aws.region, timeout_seconds=aws.bedrock_timeout_seconds)
+    )
+    return BedrockAIReviewer(
+        client,
+        model_id=aws.invocation_model_id(),
+        region=aws.region,
+        max_tokens=aws.bedrock_max_tokens,
+        temperature=aws.bedrock_temperature,
+        max_prompt_chars=aws.max_prompt_chars,
+    )
 
 
 def model_registry_for(

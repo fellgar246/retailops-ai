@@ -30,7 +30,8 @@ def test_s3_filename_is_not_used_as_the_object_key() -> None:
 
     assert stored.filename == "secret.csv"
     assert ("docs", "secret.csv") not in client.objects
-    assert ("docs", f"documents/{stored.key}") in client.objects
+    assert all("secret.csv" not in key for _, key in client.objects)
+    assert ("docs", f"documents/{stored.key}/source/payload") in client.objects
 
 
 def test_s3_rejects_illegal_keys() -> None:

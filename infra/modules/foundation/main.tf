@@ -51,14 +51,16 @@ module "secrets" {
 }
 
 module "iam" {
-  source               = "../iam_foundation"
-  name_prefix          = local.name_prefix
-  aws_region           = var.aws_region
-  account_id           = var.account_id
-  documents_bucket_arn = module.documents.bucket_arn
-  ecr_repository_arns  = values(module.ecr.repository_arns)
-  secret_arns          = values(module.secrets.secret_arns)
-  tags                 = merge(local.common_tags, { Component = "iam" })
+  source                       = "../iam_foundation"
+  name_prefix                  = local.name_prefix
+  aws_region                   = var.aws_region
+  account_id                   = var.account_id
+  documents_bucket_arn         = module.documents.bucket_arn
+  ecr_repository_arns          = values(module.ecr.repository_arns)
+  secret_arns                  = values(module.secrets.secret_arns)
+  bedrock_model_id             = var.bedrock_model_id
+  bedrock_inference_profile_id = var.bedrock_inference_profile_id
+  tags                         = merge(local.common_tags, { Component = "iam" })
 }
 
 module "budget" {
