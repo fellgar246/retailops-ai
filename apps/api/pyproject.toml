@@ -17,6 +17,14 @@ dependencies = [
     "joblib>=1.4.0",
     "openpyxl>=3.1.0",
     "pypdf>=5.0.0",
+    "openai>=2.0.0,<3",
+]
+
+[project.optional-dependencies]
+paddleocr = [
+    "paddleocr[doc-parser]>=3.3.0,<4",
+    "paddlepaddle>=3.2.0,<4",
+    "Pillow>=11.0.0",
 ]
 
 [project.scripts]
@@ -93,5 +101,7 @@ module = [
     "boto3.*",
     "botocore",
     "botocore.*",
+    "paddleocr",
+    "PIL.*",
 ]
 ignore_missing_imports = true

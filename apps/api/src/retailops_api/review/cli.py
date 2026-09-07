@@ -39,7 +39,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         output = args.output or default_review_output()
         if args.compare:
             mock_report = evaluate(MockAIReviewer(dataset.fixtures()), dataset)
-            live = _live_reviewer()
+            live = _live_reviewer("openai" if args.provider == "openai" else "bedrock")
             live_report = evaluate(
                 live,
                 dataset,
@@ -47,7 +47,7 @@ def main(argv: Sequence[str] | None = None) -> int:
                 model_id=_reviewer_model(live),
             )
             mock_dir = write_evaluation(mock_report, output / "mock", stamp=True)
-            live_dir = write_evaluation(live_report, output / "bedrock", stamp=True)
+            live_dir = write_evaluation(live_report, output / live.provider_id, stamp=True)
             comparison = write_comparison(mock_report, live_report, output / "comparisons")
             _print_report(mock_report, mock_dir)
             _print_report(live_report, live_dir)
@@ -60,7 +60,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             region=_reviewer_region(reviewer),
             model_id=_reviewer_model(reviewer),
         )
-        stamp = args.stamp or args.provider == "bedrock"
+        stamp = args.stamp or args.provider != "mock"
         written = write_evaluation(report, output, stamp=stamp)
         _print_report(report, written)
         return 0
@@ -70,20 +70,22 @@ def main(argv: Sequence[str] | None = None) -> int:
 
 
 def _reviewer_for(provider: str, dataset: EvaluationDataset) -> AIReviewer:
-    if provider == "bedrock":
-        return _live_reviewer()
+    if provider in {"bedrock", "openai"}:
+        return _live_reviewer(provider)
     return MockAIReviewer(dataset.fixtures())
 
 
-def _live_reviewer() -> AIReviewer:
+def _live_reviewer(provider: str = "bedrock") -> AIReviewer:
     settings = get_settings()
+    if provider == "openai":
+        return ai_reviewer_for(settings.model_copy(update={"ai_review_provider": "openai"}))
     aws = settings.aws_config()
     if not aws.bedrock_enabled():
         raise ValueError(
             "Bedrock is disabled; set AWS_ENABLED=true and "
             "BEDROCK_ENABLED=true (or AWS_USE_BEDROCK=true)"
         )
-    return ai_reviewer_for(settings)
+    return ai_reviewer_for(settings.model_copy(update={"ai_review_provider": "bedrock"}))
 
 
 def _reviewer_model(reviewer: AIReviewer) -> str | None:
@@ -137,9 +139,9 @@ def _parse_args(argv: Sequence[str] | None) -> argparse.Namespace:
     )
     parser.add_argument(
         "--provider",
-        choices=("mock", "bedrock"),
+        choices=("mock", "bedrock", "openai"),
         default="mock",
-        help="Reviewer implementation. bedrock requires AWS_ENABLED and BEDROCK_ENABLED.",
+        help="Reviewer implementation. openai requires OPENAI_API_KEY and OPENAI_MODEL.",
     )
     parser.add_argument(
         "--stamp",
@@ -149,7 +151,7 @@ def _parse_args(argv: Sequence[str] | None) -> argparse.Namespace:
     parser.add_argument(
         "--compare",
         action="store_true",
-        help="Score mock and Bedrock, write both reports, and emit a comparison.",
+        help="Compare mock with --provider openai, or Bedrock by default.",
     )
     return parser.parse_args(argv)
 

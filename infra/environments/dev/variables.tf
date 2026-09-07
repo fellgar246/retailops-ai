@@ -46,7 +46,7 @@ variable "documents_bucket_name" {
 variable "budget_limit_usd" {
   type        = string
   description = "Monthly AWS Budget limit in USD for this account."
-  default     = "50"
+  default     = "5"
 }
 
 variable "budget_alert_email" {

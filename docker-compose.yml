@@ -24,16 +24,35 @@ services:
 
   api:
     profiles: ["full"]
+    # PaddlePaddle's locked Linux wheel targets x86_64 (also on Apple Silicon).
+    platform: ${API_PLATFORM:-linux/amd64}
     build:
       context: ./apps/api
+      args:
+        ENABLE_PADDLEOCR: ${ENABLE_PADDLEOCR:-false}
+        ENABLE_AWS: ${ENABLE_AWS:-false}
     container_name: retailops-api
     restart: unless-stopped
     environment:
       DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-retailops}:${POSTGRES_PASSWORD:-retailops}@postgres:5432/${POSTGRES_DB:-retailops}
       CORS_ORIGINS: http://localhost:3000
       DOCUMENT_STORAGE_ROOT: /app/data/documents
+      AI_REVIEW_PROVIDER: ${AI_REVIEW_PROVIDER:-mock}
+      DOCUMENT_OCR_PROVIDER: ${DOCUMENT_OCR_PROVIDER:-local}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      OPENAI_MODEL: ${OPENAI_MODEL:-}
+      OPENAI_MAX_OUTPUT_TOKENS: ${OPENAI_MAX_OUTPUT_TOKENS:-2048}
+      OPENAI_TIMEOUT_SECONDS: ${OPENAI_TIMEOUT_SECONDS:-60}
+      PADDLEOCR_DEVICE: ${PADDLEOCR_DEVICE:-cpu}
+      PADDLEOCR_MAX_PAGES: ${PADDLEOCR_MAX_PAGES:-10}
+      AWS_ENABLED: ${AWS_ENABLED:-false}
+      AWS_REGION: ${AWS_REGION:-us-east-1}
+      AWS_USE_S3_STORAGE: ${AWS_USE_S3_STORAGE:-false}
+      AWS_DOCUMENTS_BUCKET: ${AWS_DOCUMENTS_BUCKET:-}
+      AWS_DOCUMENTS_PREFIX: ${AWS_DOCUMENTS_PREFIX:-supplier-documents}
     volumes:
       - document_data:/app/data/documents
+      - paddleocr_cache:/home/appuser/.paddlex
     ports:
       - "8000:8000"
     depends_on:
@@ -56,6 +75,7 @@ services:
       - api
 
 volumes:
+  paddleocr_cache:
   postgres_data:
     name: retailops_postgres_data
   document_data:

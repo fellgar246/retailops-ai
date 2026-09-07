@@ -17,6 +17,8 @@ from retailops_api.core.clients import (
     textract_client,
 )
 from retailops_api.core.config import Settings
+from retailops_api.documents.paddleocr import PaddleOCRDocumentAnalyzer
+from retailops_api.documents.parse import SheetAnalyzer
 from retailops_api.documents.paths import default_document_root
 from retailops_api.documents.s3 import S3DocumentStorage
 from retailops_api.documents.storage import DocumentStorage, LocalDocumentStorage
@@ -27,6 +29,8 @@ from retailops_api.forecasting.sources import default_registry_root
 from retailops_api.review.bedrock import BedrockAIReviewer
 from retailops_api.review.contract import AIReviewer
 from retailops_api.review.mock import MockAIReviewer
+from retailops_api.review.openai import OpenAIReviewer
+from retailops_api.review.types import ReviewerError
 
 
 def document_storage_for(
@@ -52,8 +56,20 @@ def document_analyzer_for(
     settings: Settings,
     *,
     textract: Any | None = None,
-) -> TextractDocumentAnalyzer | None:
+    paddleocr: Any | None = None,
+) -> SheetAnalyzer | None:
+    if settings.document_ocr_provider == "paddleocr":
+        return PaddleOCRDocumentAnalyzer(
+            paddleocr,
+            device=settings.paddleocr_device,
+            max_pages=settings.paddleocr_max_pages,
+            max_upload_bytes=settings.max_upload_bytes,
+        )
+    if settings.document_ocr_provider == "local":
+        return None
     aws = settings.aws_config()
+    if settings.document_ocr_provider == "textract":
+        aws.require_textract()
     if not aws.textract_enabled():
         return None
     aws.require_textract()
@@ -65,8 +81,29 @@ def ai_reviewer_for(
     settings: Settings,
     *,
     bedrock: Any | None = None,
+    openai: Any | None = None,
 ) -> AIReviewer:
+    if settings.ai_review_provider == "openai":
+        if not settings.openai_model.strip():
+            raise ReviewerError("OPENAI_MODEL is required when AI_REVIEW_PROVIDER=openai")
+        if openai is None:
+            from openai import OpenAI
+
+            key = settings.openai_api_key.get_secret_value().strip()
+            if not key:
+                raise ReviewerError("OPENAI_API_KEY is required when AI_REVIEW_PROVIDER=openai")
+            openai = OpenAI(api_key=key, timeout=settings.openai_timeout_seconds, max_retries=2)
+        return OpenAIReviewer(
+            openai,
+            model_id=settings.openai_model,
+            max_output_tokens=settings.openai_max_output_tokens,
+            max_prompt_chars=settings.max_prompt_chars,
+        )
+    if settings.ai_review_provider == "mock":
+        return MockAIReviewer()
     aws = settings.aws_config()
+    if settings.ai_review_provider == "bedrock":
+        aws.require_bedrock()
     if not aws.bedrock_enabled():
         return MockAIReviewer()
     aws.require_bedrock()

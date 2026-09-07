@@ -1,7 +1,7 @@
 from functools import lru_cache
-from typing import Annotated
+from typing import Annotated, Literal
 
-from pydantic import AliasChoices, Field, field_validator
+from pydantic import AliasChoices, Field, SecretStr, field_validator
 from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
 
 from retailops_api.core.aws import (
@@ -47,6 +47,16 @@ class Settings(BaseSettings):
 
     # Empty means the CLI uses <repo>/data/documents. Set this to pin a root.
     document_storage_root: str = ""
+
+    # Explicit providers take precedence over the legacy AWS feature flags.
+    ai_review_provider: Literal["auto", "mock", "openai", "bedrock"] = "auto"
+    document_ocr_provider: Literal["auto", "local", "paddleocr", "textract"] = "auto"
+    openai_api_key: SecretStr = SecretStr("")
+    openai_model: str = ""
+    openai_max_output_tokens: int = Field(default=2048, ge=1)
+    openai_timeout_seconds: float = Field(default=60, gt=0)
+    paddleocr_device: str = "cpu"
+    paddleocr_max_pages: int = Field(default=10, ge=1)
 
     # AWS stays disabled unless explicitly enabled. Feature flags cannot turn
     # adapters on by themselves.

@@ -17,6 +17,11 @@ SageMaker registry) implement the same contracts as the local stack and
 stay disabled unless `AWS_ENABLED` and the matching feature flag are set.
 `AWS_ENABLED=false` remains the local default.
 
+**Portable replacements:** OpenAI API review and PaddleOCR document extraction
+can run from the same backend locally or on AWS, independently of the AWS flags.
+See [OpenAI + PaddleOCR setup](apps/api/PROVIDERS.md) for provider configuration,
+optional OCR dependencies, Docker builds and AWS runtime requirements.
+
 The `dev` AWS foundation (remote state, VPC, IAM, documents bucket, ECR
 and Secrets Manager containers) can be applied from `infra/`. Local
 developer commands never plan or apply. They never enable Bedrock,
