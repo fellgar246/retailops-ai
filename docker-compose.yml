@@ -36,6 +36,10 @@ services:
     environment:
       DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-retailops}:${POSTGRES_PASSWORD:-retailops}@postgres:5432/${POSTGRES_DB:-retailops}
       CORS_ORIGINS: http://localhost:3000
+      AUTH_PROVIDER: ${AUTH_PROVIDER:-local}
+      AUTH_LOCAL_SECRET: ${AUTH_LOCAL_SECRET:-retailops-local-development-identity-secret}
+      COGNITO_USER_POOL_ID: ${COGNITO_USER_POOL_ID:-}
+      COGNITO_CLIENT_ID: ${COGNITO_CLIENT_ID:-}
       DOCUMENT_STORAGE_ROOT: /app/data/documents
       AI_REVIEW_PROVIDER: ${AI_REVIEW_PROVIDER:-mock}
       DOCUMENT_OCR_PROVIDER: ${DOCUMENT_OCR_PROVIDER:-local}
@@ -63,12 +67,15 @@ services:
     profiles: ["full"]
     build:
       context: ./apps/web
-      args:
-        NEXT_PUBLIC_API_BASE_URL: http://localhost:8000
     container_name: retailops-web
     restart: unless-stopped
     environment:
-      NEXT_PUBLIC_API_BASE_URL: http://localhost:8000
+      API_ORIGIN: http://api:8000
+      APP_ORIGIN: http://localhost:3000
+      AUTH_PROVIDER: ${AUTH_PROVIDER:-local}
+      AUTH_LOCAL_SECRET: ${AUTH_LOCAL_SECRET:-retailops-local-development-identity-secret}
+      COGNITO_DOMAIN: ${COGNITO_DOMAIN:-}
+      COGNITO_CLIENT_ID: ${COGNITO_CLIENT_ID:-}
     ports:
       - "3000:3000"
     depends_on:

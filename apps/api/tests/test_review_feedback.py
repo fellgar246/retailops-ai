@@ -6,22 +6,22 @@ from sqlalchemy.orm import Session
 
 from retailops_api.review.feedback import FEEDBACK_JSONL, project_feedback, write_feedback
 from retailops_api.review.workflow import approve_review, correct_review, start_review
-from tests.review_support import finding_case
+from tests.review_support import finding_case, person
 
 
 def test_feedback_exports_decided_cases_with_ai_and_correction(
     session: Session, tmp_path: Path
 ) -> None:
     approved = finding_case(session, supplier_code="SUP-FB1")
-    start_review(session, approved.id, reviewer="alice")
-    approve_review(session, approved.id, reviewer="alice")
+    start_review(session, approved.id, actor=person("alice"))
+    approve_review(session, approved.id, actor=person("alice"))
 
     corrected = finding_case(session, supplier_code="SUP-FB2", suggested_value="BEV-SOFT")
-    start_review(session, corrected.id, reviewer="alice")
+    start_review(session, corrected.id, actor=person("alice"))
     correct_review(
         session,
         corrected.id,
-        reviewer="alice",
+        actor=person("alice"),
         correction={"suggested_value": "BEV-WATER"},
     )
     finding_case(session, supplier_code="SUP-FB3")

@@ -8,7 +8,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
-from retailops_api.api.deps import get_db
+from retailops_api.api.deps import DecidingPrincipal, get_db
 from retailops_api.domain.repositories import get_supplier_by_code
 from retailops_api.review.audit import list_events
 from retailops_api.review.cases import (
@@ -54,26 +54,22 @@ class CreateReviewBody(BaseModel):
     ai_result: dict[str, Any] | None = None
 
 
-class ReviewerBody(BaseModel):
-    reviewer: str = Field(min_length=1, max_length=128)
-
-
-class ApproveBody(ReviewerBody):
+class ApproveBody(BaseModel):
     comment: str | None = None
     snapshot_id: int | None = None
 
 
-class RejectBody(ReviewerBody):
+class RejectBody(BaseModel):
     reason: str = Field(min_length=1)
     comment: str | None = None
 
 
-class CorrectBody(ReviewerBody):
+class CorrectBody(BaseModel):
     correction: dict[str, Any]
     comment: str | None = None
 
 
-class CancelBody(ReviewerBody):
+class CancelBody(BaseModel):
     comment: str | None = None
 
 
@@ -145,27 +141,25 @@ def get_review_audit(case_id: int, session: DbSession) -> dict[str, Any]:
 
 
 @router.post("/{case_id}/start")
-def start_case(case_id: int, body: ReviewerBody, session: DbSession) -> dict[str, Any]:
-    return _translate(
-        lambda: case_view(start_review(session, case_id, reviewer=body.reviewer)).to_dict()
-    )
+def start_case(case_id: int, actor: DecidingPrincipal, session: DbSession) -> dict[str, Any]:
+    return _translate(lambda: case_view(start_review(session, case_id, actor=actor)).to_dict())
 
 
 @router.post("/{case_id}/assign")
-def assign_case(case_id: int, body: ReviewerBody, session: DbSession) -> dict[str, Any]:
-    return _translate(
-        lambda: case_view(assign_review(session, case_id, reviewer=body.reviewer)).to_dict()
-    )
+def assign_case(case_id: int, actor: DecidingPrincipal, session: DbSession) -> dict[str, Any]:
+    return _translate(lambda: case_view(assign_review(session, case_id, actor=actor)).to_dict())
 
 
 @router.post("/{case_id}/approve")
-def approve_case(case_id: int, body: ApproveBody, session: DbSession) -> dict[str, Any]:
+def approve_case(
+    case_id: int, body: ApproveBody, actor: DecidingPrincipal, session: DbSession
+) -> dict[str, Any]:
     return _translate(
         lambda: case_view(
             approve_review(
                 session,
                 case_id,
-                reviewer=body.reviewer,
+                actor=actor,
                 comment=body.comment,
                 snapshot_id=body.snapshot_id,
             )
@@ -174,24 +168,26 @@ def approve_case(case_id: int, body: ApproveBody, session: DbSession) -> dict[st
 
 
 @router.post("/{case_id}/reject")
-def reject_case(case_id: int, body: RejectBody, session: DbSession) -> dict[str, Any]:
+def reject_case(
+    case_id: int, body: RejectBody, actor: DecidingPrincipal, session: DbSession
+) -> dict[str, Any]:
     return _translate(
         lambda: case_view(
-            reject_review(
-                session, case_id, reviewer=body.reviewer, reason=body.reason, comment=body.comment
-            )
+            reject_review(session, case_id, actor=actor, reason=body.reason, comment=body.comment)
         ).to_dict()
     )
 
 
 @router.post("/{case_id}/correct")
-def correct_case(case_id: int, body: CorrectBody, session: DbSession) -> dict[str, Any]:
+def correct_case(
+    case_id: int, body: CorrectBody, actor: DecidingPrincipal, session: DbSession
+) -> dict[str, Any]:
     return _translate(
         lambda: case_view(
             correct_review(
                 session,
                 case_id,
-                reviewer=body.reviewer,
+                actor=actor,
                 correction=body.correction,
                 comment=body.comment,
             )
@@ -200,10 +196,12 @@ def correct_case(case_id: int, body: CorrectBody, session: DbSession) -> dict[st
 
 
 @router.post("/{case_id}/cancel")
-def cancel_case(case_id: int, body: CancelBody, session: DbSession) -> dict[str, Any]:
+def cancel_case(
+    case_id: int, body: CancelBody, actor: DecidingPrincipal, session: DbSession
+) -> dict[str, Any]:
     return _translate(
         lambda: case_view(
-            cancel_review(session, case_id, reviewer=body.reviewer, comment=body.comment)
+            cancel_review(session, case_id, actor=actor, comment=body.comment)
         ).to_dict()
     )
 

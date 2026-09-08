@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { getForecasts } from '@/lib/api';
 import { formatDate, formatDateTime, formatNumber, formatPercent } from '@/lib/format';
 import { FORECAST_STATUS_LABELS } from '@/lib/labels';
-import { useResource } from '@/lib/use-resource';
+import { hasFailed, useResource } from '@/lib/use-resource';
 import { Badge } from '@/components/ui/Badge';
 import { DataTable } from '@/components/ui/DataTable';
 import { EmptyState } from '@/components/ui/EmptyState';
@@ -25,7 +25,7 @@ export function ForecastListPage() {
   if (resource.status === 'loading' && !resource.data) {
     return <LoadingState label="Cargando ejecuciones de forecast…" />;
   }
-  if (resource.status === 'error' && !resource.data) {
+  if (hasFailed(resource.status) && !resource.data) {
     return <ErrorState error={resource.error} onRetry={resource.reload} />;
   }
   if (resource.status === 'empty' || !resource.data?.items.length) {

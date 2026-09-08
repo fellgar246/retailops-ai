@@ -127,15 +127,6 @@ def as_confidence(value: float | Decimal) -> Decimal:
     return Decimal(str(value)).quantize(CONFIDENCE_QUANT)
 
 
-def require_reviewer(reviewer: str) -> str:
-    text = reviewer.strip()
-    if not text:
-        raise ReviewValidationError("reviewer is required")
-    if len(text) > 128:
-        raise ReviewValidationError("reviewer must be at most 128 characters")
-    return text
-
-
 def parse_correction(raw: dict[str, Any]) -> dict[str, Any]:
     unknown = set(raw) - CORRECTION_KEYS
     if unknown:
@@ -199,6 +190,9 @@ class ReviewCaseView:
     recommended_action: str | None
     status: ReviewStatus
     reviewer: str | None
+    #: True when an identity provider vouched for the reviewer. Cases decided
+    #: before authentication existed report False.
+    reviewer_verified: bool
     opened_at: datetime | None
     decided_at: datetime | None
     created_at: datetime
@@ -217,6 +211,7 @@ class ReviewCaseView:
             "financial_impact": str(self.financial_impact),
             "recommended_action": self.recommended_action,
             "status": self.status.value,
+            "reviewer_verified": self.reviewer_verified,
             "reviewer": self.reviewer,
             "opened_at": _iso(self.opened_at),
             "decided_at": _iso(self.decided_at),
@@ -271,6 +266,5 @@ __all__ = [
     "parse_correction",
     "reference_key",
     "require_reason",
-    "require_reviewer",
     "risk_from_severity",
 ]

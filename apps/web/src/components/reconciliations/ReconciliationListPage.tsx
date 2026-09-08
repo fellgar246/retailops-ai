@@ -4,7 +4,7 @@ import { useRouter } from 'next/navigation';
 
 import { getReconciliations } from '@/lib/api';
 import { formatDateTime, formatMoney, formatNumber } from '@/lib/format';
-import { useResource } from '@/lib/use-resource';
+import { hasFailed, useResource } from '@/lib/use-resource';
 import { DataTable } from '@/components/ui/DataTable';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { ErrorState } from '@/components/ui/ErrorState';
@@ -23,7 +23,7 @@ export function ReconciliationListPage() {
   if (resource.status === 'loading' && !resource.data) {
     return <LoadingState label="Cargando conciliaciones…" />;
   }
-  if (resource.status === 'error' && !resource.data) {
+  if (hasFailed(resource.status) && !resource.data) {
     return <ErrorState error={resource.error} onRetry={resource.reload} />;
   }
   if (resource.status === 'empty' || !resource.data?.items.length) {

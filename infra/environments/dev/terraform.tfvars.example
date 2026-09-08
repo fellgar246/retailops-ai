@@ -6,3 +6,5 @@ documents_bucket_name          = "retailops-ai-dev-documents-000000000000"
 budget_alert_email             = ""
 bedrock_model_id               = "anthropic.claude-haiku-4-5-20251001-v1:0"
 bedrock_inference_profile_id   = "us.anthropic.claude-haiku-4-5-20251001-v1:0"
+
+identity_domain_prefix         = "retailops-ai-dev-168629931092"

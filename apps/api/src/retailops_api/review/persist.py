@@ -71,6 +71,7 @@ def case_view(case: ReviewCase) -> ReviewCaseView:
         recommended_action=case.recommended_action,
         status=ReviewStatus(case.status),
         reviewer=case.reviewer,
+        reviewer_verified=case.reviewer_subject is not None,
         opened_at=case.opened_at,
         decided_at=case.decided_at,
         created_at=case.created_at,

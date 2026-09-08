@@ -10,6 +10,7 @@ Retail operations intelligence platform. This repository currently contains:
 - **Procurement and reconciliation** — persist purchase orders, goods receipts and supplier invoices, then run a deterministic three-way match with explicit tolerances.
 - **AI review contracts** — a provider-neutral reviewer, structured and validated outputs, a fixture mock, conservative routing to human review, and a versioned evaluation harness.
 - **Human review** — persisted cases on document findings and reconciliation exceptions, an immutable AI snapshot, controlled decisions, an append-only audit log, a feedback export and a metrics API.
+- **Authentication** — sign-in against a local development provider or a hosted user pool, two roles, and a verified subject on every review decision and audit event.
 - **Operations web app** — a desktop-first shell for the overview, forecast runs, supplier documents, reconciliation exceptions, the human review queue, AI evaluation and the audit trail.
 
 Cloud adapters (S3 storage, Textract sheet translation, Bedrock review,
@@ -56,7 +57,14 @@ Configuration lives in environment variables. `make setup` copies
 | `POSTGRES_*`               | Database credentials and host port           |
 | `DATABASE_URL`             | SQLAlchemy/Alembic connection string         |
 | `CORS_ORIGINS`             | Comma-separated origins allowed by the API   |
-| `NEXT_PUBLIC_API_BASE_URL` | API base URL used by the browser             |
+| `AUTH_PROVIDER`            | `local` development tokens or `cognito` hosted sign-in |
+| `AUTH_LOCAL_SECRET`        | Signing key shared by API and web for development tokens |
+| `COGNITO_USER_POOL_ID`     | User pool backing hosted sign-in            |
+| `COGNITO_CLIENT_ID`        | Application client id, validated as the token audience |
+| `COGNITO_REGION`           | Region of the user pool (defaults to `AWS_REGION`) |
+| `COGNITO_DOMAIN`           | Hosted sign-in domain used by the web application |
+| `API_ORIGIN`               | Where the web application forwards API calls (server-side) |
+| `APP_ORIGIN`               | Public origin of the web application, used for redirects |
 | `DOCUMENT_STORAGE_ROOT`    | Local root for stored supplier files (optional; default `data/documents`) |
 | `AWS_ENABLED`              | Master switch for cloud adapters (default `false`) |
 | `AWS_REGION`               | Region used when a cloud adapter is enabled |
@@ -137,7 +145,9 @@ make web        # http://localhost:3000
 ```
 
 The web app is the operations console. It reads live API data: no hardcoded
-KPIs. Open `http://localhost:3000` for the overview, then use the sidebar to
+KPIs. Opening it redirects to `/signin`; with the default local identity
+provider, enter any name and choose a role. Then open `http://localhost:3000`
+for the overview, then use the sidebar to
 reach forecasts, documents, reconciliations, reviews, AI evaluation, audit
 and settings.
 

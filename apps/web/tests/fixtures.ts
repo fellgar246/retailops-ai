@@ -162,6 +162,7 @@ export const reviewDetailFixture: ReviewDetail = {
   recommended_action: 'human_review',
   status: 'in_review',
   reviewer: 'alice',
+  reviewer_verified: true,
   opened_at: '2026-08-30T17:10:00+00:00',
   decided_at: null,
   created_at: '2026-08-30T17:00:00+00:00',

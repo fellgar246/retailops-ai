@@ -12,7 +12,7 @@ from retailops_api.review.workflow import (
     reject_review,
     start_review,
 )
-from tests.review_support import finding_case
+from tests.review_support import finding_case, person
 
 
 def test_metrics_with_no_cases_are_zero(session: Session) -> None:
@@ -29,34 +29,34 @@ def test_metrics_count_open_cases_and_decision_rates(session: Session) -> None:
 
     finding_case(session, supplier_code="SUP-M1")
     active = finding_case(session, supplier_code="SUP-M2")
-    start_review(session, active.id, reviewer="alice", occurred_at=opened)
+    start_review(session, active.id, actor=person("alice"), occurred_at=opened)
 
     approved = finding_case(session, supplier_code="SUP-M3")
-    start_review(session, approved.id, reviewer="alice", occurred_at=opened)
-    approve_review(session, approved.id, reviewer="alice", occurred_at=opened + hour)
+    start_review(session, approved.id, actor=person("alice"), occurred_at=opened)
+    approve_review(session, approved.id, actor=person("alice"), occurred_at=opened + hour)
 
     rejected = finding_case(session, supplier_code="SUP-M4")
-    start_review(session, rejected.id, reviewer="alice", occurred_at=opened)
+    start_review(session, rejected.id, actor=person("alice"), occurred_at=opened)
     reject_review(
         session,
         rejected.id,
-        reviewer="alice",
+        actor=person("alice"),
         reason="no",
         occurred_at=opened + (2 * hour),
     )
 
     corrected = finding_case(session, supplier_code="SUP-M5")
-    start_review(session, corrected.id, reviewer="alice", occurred_at=opened)
+    start_review(session, corrected.id, actor=person("alice"), occurred_at=opened)
     correct_review(
         session,
         corrected.id,
-        reviewer="alice",
+        actor=person("alice"),
         correction={"suggested_value": "BEV-WATER"},
         occurred_at=opened + (3 * hour),
     )
 
     cancelled = finding_case(session, supplier_code="SUP-M6")
-    cancel_review(session, cancelled.id, reviewer="alice")
+    cancel_review(session, cancelled.id, actor=person("alice"))
 
     metrics = collect_metrics(session)
     assert metrics.open_cases == 2

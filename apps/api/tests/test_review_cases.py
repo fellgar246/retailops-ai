@@ -13,7 +13,6 @@ from retailops_api.review.cases import (
     derive_priority,
     parse_correction,
     require_reason,
-    require_reviewer,
     risk_from_severity,
 )
 from retailops_api.review.types import RiskLevel
@@ -79,9 +78,6 @@ def test_empty_or_unknown_correction_is_rejected() -> None:
         parse_correction({"invented": "x"})
 
 
-def test_reviewer_and_reason_must_be_present() -> None:
-    with pytest.raises(ReviewValidationError):
-        require_reviewer("   ")
+def test_reason_must_be_present() -> None:
     with pytest.raises(ReviewValidationError):
         require_reason("")
-    assert require_reviewer(" alice ") == "alice"

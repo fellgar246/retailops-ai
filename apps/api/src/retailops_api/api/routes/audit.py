@@ -22,6 +22,7 @@ def recent_audit(session: DbSession, limit: int = DEFAULT_LIMIT, offset: int = 0
                 "review_case_id": event.review_case_id,
                 "event_type": event.event_type,
                 "actor": event.actor,
+                "actor_verified": event.actor_subject is not None,
                 "from_status": event.from_status,
                 "to_status": event.to_status,
                 "payload": event.payload,

@@ -95,27 +95,27 @@ export function getReviewAudit(
   return apiRequest<{ items: AuditPage['items'] }>(`/reviews/${id}/audit`, { signal });
 }
 
-export function startReview(id: number, reviewer: string): Promise<ReviewDetail> {
-  return apiRequest<ReviewDetail>(`/reviews/${id}/start`, { method: 'POST', body: { reviewer } });
+export function startReview(id: number): Promise<ReviewDetail> {
+  return apiRequest<ReviewDetail>(`/reviews/${id}/start`, { method: 'POST', body: {} });
 }
 
 export function approveReview(
   id: number,
-  body: { reviewer: string; comment?: string; snapshot_id?: number },
+  body: { comment?: string; snapshot_id?: number },
 ): Promise<ReviewDetail> {
   return apiRequest<ReviewDetail>(`/reviews/${id}/approve`, { method: 'POST', body });
 }
 
 export function rejectReview(
   id: number,
-  body: { reviewer: string; reason: string; comment?: string },
+  body: { reason: string; comment?: string },
 ): Promise<ReviewDetail> {
   return apiRequest<ReviewDetail>(`/reviews/${id}/reject`, { method: 'POST', body });
 }
 
 export function correctReview(
   id: number,
-  body: { reviewer: string; correction: Record<string, unknown>; comment?: string },
+  body: { correction: Record<string, unknown>; comment?: string },
 ): Promise<ReviewDetail> {
   return apiRequest<ReviewDetail>(`/reviews/${id}/correct`, { method: 'POST', body });
 }

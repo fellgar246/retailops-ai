@@ -50,6 +50,17 @@ module "secrets" {
   }
 }
 
+module "identity" {
+  source              = "../cognito"
+  name_prefix         = local.name_prefix
+  domain_prefix       = var.identity_domain_prefix
+  tier                = var.identity_tier
+  callback_urls       = var.identity_callback_urls
+  logout_urls         = var.identity_logout_urls
+  deletion_protection = var.identity_deletion_protection
+  tags                = merge(local.common_tags, { Component = "identity" })
+}
+
 module "iam" {
   source                       = "../iam_foundation"
   name_prefix                  = local.name_prefix

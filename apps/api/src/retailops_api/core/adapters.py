@@ -26,6 +26,10 @@ from retailops_api.documents.textract import TextractDocumentAnalyzer
 from retailops_api.forecasting.registry import LocalModelRegistry, ModelRegistry
 from retailops_api.forecasting.sagemaker_registry import SageMakerModelRegistry
 from retailops_api.forecasting.sources import default_registry_root
+from retailops_api.identity.cognito import CognitoIdentityVerifier, https_key_source
+from retailops_api.identity.contract import IdentityVerifier
+from retailops_api.identity.local import LocalIdentityVerifier
+from retailops_api.identity.types import IdentityConfigError
 from retailops_api.review.bedrock import BedrockAIReviewer
 from retailops_api.review.contract import AIReviewer
 from retailops_api.review.mock import MockAIReviewer
@@ -120,6 +124,41 @@ def ai_reviewer_for(
         temperature=aws.bedrock_temperature,
         max_prompt_chars=aws.max_prompt_chars,
     )
+
+
+def identity_verifier_for(
+    settings: Settings,
+    *,
+    key_source: Any | None = None,
+) -> IdentityVerifier:
+    """Build the configured verifier.
+
+    Every provider is resolved from the same explicit setting and each branch
+    validates its own configuration before returning. No branch falls through
+    to another provider, so a misconfigured deployment fails loudly instead of
+    quietly authenticating against a development key.
+    """
+
+    provider = settings.auth_provider
+    if provider == "local":
+        secret = settings.auth_local_secret.get_secret_value().strip()
+        if not secret:
+            raise IdentityConfigError("AUTH_LOCAL_SECRET is required when AUTH_PROVIDER=local")
+        return LocalIdentityVerifier(secret, ttl_seconds=settings.auth_local_ttl_seconds)
+    if provider == "cognito":
+        issuer = settings.cognito_issuer
+        if not issuer:
+            raise IdentityConfigError(
+                "COGNITO_USER_POOL_ID and a region are required when AUTH_PROVIDER=cognito"
+            )
+        audience = settings.cognito_client_id.strip()
+        if not audience:
+            raise IdentityConfigError("COGNITO_CLIENT_ID is required when AUTH_PROVIDER=cognito")
+        source = (
+            key_source if key_source is not None else https_key_source(settings.cognito_jwks_uri)
+        )
+        return CognitoIdentityVerifier(issuer=issuer, audience=audience, key_source=source)
+    raise IdentityConfigError(f"unknown identity provider {provider!r}")
 
 
 def model_registry_for(

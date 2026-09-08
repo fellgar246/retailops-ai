@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { getReviews } from '@/lib/api';
 import { confidenceBand, formatConfidence, formatMoney, formatRelative } from '@/lib/format';
 import { PRIORITY_LABELS, RISK_LABELS, STATUS_LABELS, SUBJECT_LABELS } from '@/lib/labels';
-import { useResource } from '@/lib/use-resource';
+import { hasFailed, useResource } from '@/lib/use-resource';
 import { Badge } from '@/components/ui/Badge';
 import { DataTable } from '@/components/ui/DataTable';
 import { EmptyState } from '@/components/ui/EmptyState';
@@ -50,7 +50,7 @@ export function ReviewQueuePage() {
   if (resource.status === 'loading' && !resource.data) {
     return <LoadingState label="Cargando la cola de revisión…" />;
   }
-  if (resource.status === 'error' && !resource.data) {
+  if (hasFailed(resource.status) && !resource.data) {
     return <ErrorState error={resource.error} onRetry={resource.reload} />;
   }
 

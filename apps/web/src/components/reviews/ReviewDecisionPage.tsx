@@ -24,7 +24,6 @@ import {
   STATUS_LABELS,
   labelOf,
 } from '@/lib/labels';
-import { readReviewer } from '@/lib/reviewer';
 import { useResource } from '@/lib/use-resource';
 import { Badge } from '@/components/ui/Badge';
 import { ErrorState } from '@/components/ui/ErrorState';
@@ -81,8 +80,6 @@ export function ReviewDecisionPage({ id }: { id: number }) {
     }
   };
 
-  const reviewer = readReviewer();
-
   const goNext = async () => {
     const page = await getReviews({ status: ['open', 'in_review'], limit: 20 });
     const next = page.items.find((item) => item.id !== id);
@@ -116,7 +113,6 @@ export function ReviewDecisionPage({ id }: { id: number }) {
     event.preventDefault();
     void run(() =>
       approveReview(id, {
-        reviewer,
         comment: comment || undefined,
         snapshot_id: item.snapshot?.id,
       }),
@@ -125,14 +121,13 @@ export function ReviewDecisionPage({ id }: { id: number }) {
 
   const onReject = (event: FormEvent) => {
     event.preventDefault();
-    void run(() => rejectReview(id, { reviewer, reason, comment: comment || undefined }));
+    void run(() => rejectReview(id, { reason, comment: comment || undefined }));
   };
 
   const onCorrect = (event: FormEvent) => {
     event.preventDefault();
     void run(() =>
       correctReview(id, {
-        reviewer,
         comment: comment || undefined,
         correction: { suggested_value: correction },
       }),
@@ -289,7 +284,7 @@ export function ReviewDecisionPage({ id }: { id: number }) {
             <button
               className="btn btn--primary"
               disabled={busy}
-              onClick={() => void run(() => startReview(id, reviewer))}
+              onClick={() => void run(() => startReview(id))}
               type="button"
             >
               Tomar caso

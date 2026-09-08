@@ -168,6 +168,7 @@ export interface ReviewCase {
   recommended_action: string | null;
   status: ReviewStatus;
   reviewer: string | null;
+  reviewer_verified: boolean;
   opened_at: string | null;
   decided_at: string | null;
   created_at: string;

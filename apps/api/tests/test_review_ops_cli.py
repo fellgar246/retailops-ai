@@ -10,7 +10,7 @@ from sqlalchemy.orm import Session
 from retailops_api.review import ops_cli
 from retailops_api.review.ops_cli import main
 from retailops_api.review.workflow import start_review
-from tests.review_support import finding_case
+from tests.review_support import finding_case, person
 
 
 def test_cli_requires_a_command() -> None:
@@ -49,7 +49,7 @@ def test_cli_start_and_feedback(
     cli_session: Session, tmp_path: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
     case = finding_case(cli_session, supplier_code="SUP-CLI2")
-    start_review(cli_session, case.id, reviewer="alice")
+    start_review(cli_session, case.id, actor=person("alice"))
 
     assert main(["approve", str(case.id), "--reviewer", "alice", "--comment", "ok"]) == 0
     assert main(["feedback", "--output", str(tmp_path)]) == 0

@@ -115,3 +115,27 @@ variable "tags" {
   description = "Tags applied to ECS and load-balancer resources."
   default     = {}
 }
+
+variable "auth_provider" {
+  type        = string
+  description = "Identity provider the application validates tokens against."
+  default     = "cognito"
+}
+
+variable "cognito_user_pool_id" {
+  type        = string
+  description = "User pool the API validates tokens against."
+  default     = ""
+}
+
+variable "cognito_client_id" {
+  type        = string
+  description = "Application client id used as the token audience."
+  default     = ""
+}
+
+variable "cognito_domain" {
+  type        = string
+  description = "Hosted sign-in domain used by the web application."
+  default     = ""
+}

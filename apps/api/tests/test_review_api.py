@@ -4,7 +4,7 @@ from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
 
 from retailops_api.review.workflow import start_review
-from tests.review_support import finding_case
+from tests.review_support import finding_case, person
 
 
 def test_metrics_endpoint_starts_empty(api_client: TestClient) -> None:
@@ -50,9 +50,9 @@ def test_create_list_start_approve_and_audit(api_client: TestClient, session: Se
 
 def test_reject_and_correct_and_conflict(api_client: TestClient, session: Session) -> None:
     rejected = finding_case(session, supplier_code="SUP-HTTP-R")
-    start_review(session, rejected.id, reviewer="alice")
+    start_review(session, rejected.id, actor=person("alice"))
     corrected = finding_case(session, supplier_code="SUP-HTTP-C")
-    start_review(session, corrected.id, reviewer="alice")
+    start_review(session, corrected.id, actor=person("alice"))
     session.commit()
 
     missing_reason = api_client.post(

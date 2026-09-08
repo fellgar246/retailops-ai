@@ -11,9 +11,14 @@ from sqlalchemy.orm import Session
 from sqlalchemy.pool import StaticPool
 
 from retailops_api.api.deps import get_db
-from retailops_api.core.config import get_settings
+from retailops_api.core.config import Settings, get_settings
 from retailops_api.domain.models import Base
+from retailops_api.identity.local import LocalIdentityVerifier
+from retailops_api.identity.types import Principal, Role
 from retailops_api.main import create_app
+
+#: Long enough for HMAC-SHA256; the value itself is meaningless.
+TEST_IDENTITY_SECRET = "retailops-test-identity-secret-value"
 
 #: Scratch database for the PostgreSQL integration tests. Created and dropped by
 #: the fixtures below so the developer's own database is never touched.
@@ -23,9 +28,62 @@ POSTGRES_TEST_DATABASE = "retailops_test"
 POSTGRES_MIGRATION_DATABASE = "retailops_migration_test"
 
 
+def _application_env_names() -> set[str]:
+    """Every environment variable the settings model would read."""
+
+    names: set[str] = set()
+    for name, field in Settings.model_fields.items():
+        names.add(name.upper())
+        alias = field.validation_alias
+        choices = getattr(alias, "choices", None)
+        if choices:
+            names.update(str(choice).upper() for choice in choices)
+        elif isinstance(alias, str):
+            names.add(alias.upper())
+    return names
+
+
+@pytest.fixture(autouse=True, scope="session")
+def isolated_settings() -> Iterator[None]:
+    """Keep the suite independent of the machine it runs on.
+
+    Settings normally load a developer's environment file. Reading it here
+    would make adapter selection depend on local configuration, so the file and
+    any matching variables are taken out of scope for the whole session.
+    """
+
+    original_env_file = Settings.model_config.get("env_file")
+    Settings.model_config["env_file"] = None
+
+    # The database URL still comes from the environment so the PostgreSQL
+    # integration tests can reach a server the developer chose.
+    preserved = {"DATABASE_URL"}
+    removed = {
+        name: os.environ.pop(name)
+        for name in _application_env_names() - preserved
+        if name in os.environ
+    }
+    get_settings.cache_clear()
+    try:
+        yield
+    finally:
+        os.environ.update(removed)
+        Settings.model_config["env_file"] = original_env_file
+        get_settings.cache_clear()
+
+
 @pytest.fixture
-def app() -> FastAPI:
-    return create_app()
+def settings() -> Settings:
+    return Settings(
+        environment="test",
+        auth_provider="local",
+        auth_local_secret=TEST_IDENTITY_SECRET,
+    )
+
+
+@pytest.fixture
+def app(settings: Settings) -> FastAPI:
+    return create_app(settings)
 
 
 @pytest.fixture
@@ -33,16 +91,82 @@ def client(app: FastAPI) -> TestClient:
     return TestClient(app)
 
 
+# --------------------------------------------------------------------------- #
+# Identity: the suite signs its own development tokens
+# --------------------------------------------------------------------------- #
+
+
 @pytest.fixture
-def api_client(app: FastAPI, session: Session) -> Iterator[TestClient]:
+def verifier() -> LocalIdentityVerifier:
+    return LocalIdentityVerifier(TEST_IDENTITY_SECRET)
+
+
+@pytest.fixture
+def reviewer() -> Principal:
+    return Principal(
+        subject="test-reviewer",
+        display_name="Test Reviewer",
+        email="reviewer@example.test",
+        roles=frozenset({Role.reviewer}),
+    )
+
+
+@pytest.fixture
+def viewer() -> Principal:
+    return Principal(
+        subject="test-viewer",
+        display_name="Test Viewer",
+        email="viewer@example.test",
+        roles=frozenset({Role.viewer}),
+    )
+
+
+def _token(verifier: LocalIdentityVerifier, principal: Principal) -> str:
+    return verifier.issue(
+        principal.subject,
+        display_name=principal.display_name,
+        email=principal.email,
+        roles=set(principal.roles),
+    )
+
+
+@pytest.fixture
+def reviewer_token(verifier: LocalIdentityVerifier, reviewer: Principal) -> str:
+    return _token(verifier, reviewer)
+
+
+@pytest.fixture
+def viewer_token(verifier: LocalIdentityVerifier, viewer: Principal) -> str:
+    return _token(verifier, viewer)
+
+
+def _bound_client(app: FastAPI, session: Session, token: str | None) -> Iterator[TestClient]:
     def _override() -> Iterator[Session]:
         yield session
         session.commit()
 
     app.dependency_overrides[get_db] = _override
-    with TestClient(app) as test_client:
+    headers = {"Authorization": f"Bearer {token}"} if token else {}
+    with TestClient(app, headers=headers) as test_client:
         yield test_client
     app.dependency_overrides.clear()
+
+
+@pytest.fixture
+def api_client(app: FastAPI, session: Session, reviewer_token: str) -> Iterator[TestClient]:
+    """Authenticated as a reviewer, which is what most endpoints need."""
+
+    yield from _bound_client(app, session, reviewer_token)
+
+
+@pytest.fixture
+def viewer_client(app: FastAPI, session: Session, viewer_token: str) -> Iterator[TestClient]:
+    yield from _bound_client(app, session, viewer_token)
+
+
+@pytest.fixture
+def anonymous_client(app: FastAPI, session: Session) -> Iterator[TestClient]:
+    yield from _bound_client(app, session, None)
 
 
 # --------------------------------------------------------------------------- #

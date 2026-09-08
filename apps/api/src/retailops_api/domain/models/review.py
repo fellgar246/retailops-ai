@@ -135,6 +135,9 @@ class ReviewCase(IdMixin, ActiveMixin, TimestampMixin, Base):
     recommended_action: Mapped[str | None] = mapped_column(String(64), nullable=True)
     status: Mapped[str] = mapped_column(String(32), nullable=False, index=True)
     reviewer: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    # Null on records written before authentication existed. Those decisions
+    # carry an unverified display name only and must not be shown as verified.
+    reviewer_subject: Mapped[str | None] = mapped_column(String(128), nullable=True)
     opened_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     decided_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
@@ -228,6 +231,7 @@ class ReviewDecisionRecord(IdMixin, CreatedAtMixin, Base):
     )
     decision: Mapped[str] = mapped_column(String(32), nullable=False)
     reviewer: Mapped[str] = mapped_column(String(128), nullable=False)
+    reviewer_subject: Mapped[str | None] = mapped_column(String(128), nullable=True)
     reason: Mapped[str | None] = mapped_column(Text, nullable=True)
     comment: Mapped[str | None] = mapped_column(Text, nullable=True)
     accepted_recommendation_ref: Mapped[str | None] = mapped_column(String(64), nullable=True)
@@ -257,6 +261,7 @@ class ReviewAuditEvent(IdMixin, CreatedAtMixin, Base):
     )
     event_type: Mapped[str] = mapped_column(String(32), nullable=False, index=True)
     actor: Mapped[str] = mapped_column(String(128), nullable=False)
+    actor_subject: Mapped[str | None] = mapped_column(String(128), nullable=True)
     from_status: Mapped[str | None] = mapped_column(String(32), nullable=True)
     to_status: Mapped[str | None] = mapped_column(String(32), nullable=True)
     payload: Mapped[dict[str, Any] | None] = mapped_column(JSON, nullable=True)

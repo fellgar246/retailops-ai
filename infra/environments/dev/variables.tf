@@ -72,3 +72,26 @@ variable "bedrock_inference_profile_id" {
   description = "Cross-region inference profile used as the Converse model id."
   default     = "us.anthropic.claude-haiku-4-5-20251001-v1:0"
 }
+
+variable "identity_domain_prefix" {
+  type        = string
+  description = "Globally unique prefix for the hosted sign-in domain."
+}
+
+variable "identity_tier" {
+  type        = string
+  description = "User pool feature tier. LITE and ESSENTIALS share the same free monthly active users."
+  default     = "ESSENTIALS"
+}
+
+variable "identity_callback_urls" {
+  type        = list(string)
+  description = "Redirect targets accepted after sign-in."
+  default     = ["http://localhost:3000/api/auth/callback"]
+}
+
+variable "identity_logout_urls" {
+  type        = list(string)
+  description = "Redirect targets accepted after sign-out."
+  default     = ["http://localhost:3000"]
+}

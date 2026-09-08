@@ -3,7 +3,7 @@
 import { getOverview } from '@/lib/api';
 import { formatDateTime, formatMoney, formatNumber } from '@/lib/format';
 import { FORECAST_STATUS_LABELS, labelOf } from '@/lib/labels';
-import { useResource } from '@/lib/use-resource';
+import { hasFailed, useResource } from '@/lib/use-resource';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { ErrorState } from '@/components/ui/ErrorState';
 import { FreshnessBar } from '@/components/ui/FreshnessBar';
@@ -17,7 +17,7 @@ export function OverviewPage() {
   if (resource.status === 'loading' && !resource.data) {
     return <LoadingState label="Cargando el overview operativo…" />;
   }
-  if (resource.status === 'error' && !resource.data) {
+  if (hasFailed(resource.status) && !resource.data) {
     return <ErrorState error={resource.error} onRetry={resource.reload} />;
   }
   const data = resource.data;

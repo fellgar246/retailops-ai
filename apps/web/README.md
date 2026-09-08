@@ -11,7 +11,10 @@ npm run typecheck
 npm run build
 ```
 
-The shell reads the API configured by `NEXT_PUBLIC_API_BASE_URL`. Pages:
+The browser calls this application's own origin. A server-side route attaches
+the session credential from an httpOnly cookie and forwards the request to
+`API_ORIGIN`, so no page script holds a token and the image is not built for one
+environment. Pages:
 
 - Overview — forecast, document, reconciliation and review counts
 - Revisiones — queue and decision workspace

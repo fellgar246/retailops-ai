@@ -1,12 +1,25 @@
 'use client';
 
+import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 
+import { LoadingState } from '@/components/ui/LoadingState';
 import { getOverview } from '@/lib/api';
+import { useSession } from '@/lib/use-session';
 import { Sidebar } from './Sidebar';
 import { TopBar } from './TopBar';
 
+//: Rendered without the operations shell, because reaching it means there is
+//: no session to frame.
+const PUBLIC_PATHS = ['/signin'];
+
 export function AppShell({ children }: { children: React.ReactNode }) {
+  const pathname = usePathname();
+  const router = useRouter();
+  const { session, loading } = useSession();
+  const isPublic = PUBLIC_PATHS.includes(pathname ?? '');
+  const signedIn = Boolean(session?.user);
+
   const [collapsed, setCollapsed] = useState(
     () =>
       typeof window !== 'undefined' &&
@@ -16,6 +29,15 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const [environment, setEnvironment] = useState('local');
 
   useEffect(() => {
+    if (!loading && !signedIn && !isPublic) {
+      router.replace('/signin');
+    }
+  }, [loading, signedIn, isPublic, router]);
+
+  useEffect(() => {
+    if (!signedIn) {
+      return;
+    }
     void getOverview()
       .then((overview) => {
         setOpenReviews(overview.reviews.open_cases);
@@ -24,7 +46,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       .catch(() => {
         setOpenReviews(null);
       });
-  }, []);
+  }, [signedIn]);
 
   const toggle = () => {
     setCollapsed((value) => {
@@ -33,6 +55,15 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       return next;
     });
   };
+
+  if (isPublic) {
+    return <>{children}</>;
+  }
+
+  if (loading || !signedIn) {
+    // Never frame a page with data that a missing session cannot back.
+    return <LoadingState label="Comprobando la sesión…" />;
+  }
 
   return (
     <div className={collapsed ? 'shell shell--collapsed' : 'shell'}>

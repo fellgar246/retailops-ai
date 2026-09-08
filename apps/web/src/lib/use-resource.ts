@@ -8,7 +8,14 @@ export type ResourceState<T> =
   | { status: 'loading'; data: T | null; error: ApiError | null }
   | { status: 'ready'; data: T; error: null }
   | { status: 'error'; data: T | null; error: ApiError }
+  | { status: 'unauthenticated'; data: null; error: ApiError }
+  | { status: 'forbidden'; data: T | null; error: ApiError }
   | { status: 'empty'; data: T; error: null };
+
+/** Statuses where the payload could not be loaded and a page must say so. */
+export function hasFailed(status: ResourceState<unknown>['status']): boolean {
+  return status === 'error' || status === 'unauthenticated' || status === 'forbidden';
+}
 
 export function useResource<T>(
   loader: (signal: AbortSignal) => Promise<T>,
@@ -50,6 +57,19 @@ export function useResource<T>(
           error instanceof ApiError
             ? error
             : new ApiError(error instanceof Error ? error.message : 'Error');
+        if (apiError.status === 401) {
+          // The session is gone. Nothing that was on screen is still trustworthy.
+          setState({ status: 'unauthenticated', data: null, error: apiError });
+          return;
+        }
+        if (apiError.status === 403) {
+          setState((current) => ({
+            status: 'forbidden',
+            data: current.data,
+            error: apiError,
+          }));
+          return;
+        }
         setState((current) => ({ status: 'error', data: current.data, error: apiError }));
       });
     return () => controller.abort();

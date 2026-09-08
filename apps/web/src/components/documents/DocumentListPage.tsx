@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { getDocuments } from '@/lib/api';
 import { formatDateTime, formatNumber } from '@/lib/format';
 import { DOCUMENT_STATUS_LABELS, SEVERITY_LABELS } from '@/lib/labels';
-import { useResource } from '@/lib/use-resource';
+import { hasFailed, useResource } from '@/lib/use-resource';
 import { Badge } from '@/components/ui/Badge';
 import { DataTable } from '@/components/ui/DataTable';
 import { EmptyState } from '@/components/ui/EmptyState';
@@ -40,7 +40,7 @@ export function DocumentListPage() {
   if (resource.status === 'loading' && !resource.data) {
     return <LoadingState label="Cargando documentos de proveedor…" />;
   }
-  if (resource.status === 'error' && !resource.data) {
+  if (hasFailed(resource.status) && !resource.data) {
     return <ErrorState error={resource.error} onRetry={resource.reload} />;
   }
 

@@ -112,3 +112,31 @@ variable "tags" {
   description = "Additional tags merged with the standard project tags."
   default     = {}
 }
+
+variable "identity_domain_prefix" {
+  type        = string
+  description = "Globally unique prefix for the hosted sign-in domain."
+}
+
+variable "identity_tier" {
+  type        = string
+  description = "User pool feature tier."
+  default     = "ESSENTIALS"
+}
+
+variable "identity_callback_urls" {
+  type        = list(string)
+  description = "Redirect targets accepted after sign-in."
+}
+
+variable "identity_logout_urls" {
+  type        = list(string)
+  description = "Redirect targets accepted after sign-out."
+  default     = []
+}
+
+variable "identity_deletion_protection" {
+  type        = string
+  description = "ACTIVE keeps the pool from being destroyed."
+  default     = "ACTIVE"
+}

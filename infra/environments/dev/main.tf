@@ -21,4 +21,10 @@ module "foundation" {
   budget_time_period_start     = var.budget_time_period_start
   bedrock_model_id             = var.bedrock_model_id
   bedrock_inference_profile_id = var.bedrock_inference_profile_id
+  identity_domain_prefix       = var.identity_domain_prefix
+  identity_tier                = var.identity_tier
+  identity_callback_urls       = var.identity_callback_urls
+  identity_logout_urls         = var.identity_logout_urls
+  # The dev foundation is disposable and is recreated from the same variables.
+  identity_deletion_protection = "INACTIVE"
 }

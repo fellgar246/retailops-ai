@@ -95,7 +95,10 @@ resource "aws_ecs_task_definition" "api" {
       environment = [
         { name = "DATABASE_URL", value = var.database_url },
         { name = "CORS_ORIGINS", value = var.cors_origins },
-        { name = "AWS_ENABLED", value = "true" }
+        { name = "AWS_ENABLED", value = "true" },
+        { name = "AUTH_PROVIDER", value = var.auth_provider },
+        { name = "COGNITO_USER_POOL_ID", value = var.cognito_user_pool_id },
+        { name = "COGNITO_CLIENT_ID", value = var.cognito_client_id }
       ]
       logConfiguration = {
         logDriver = "awslogs"
@@ -128,7 +131,11 @@ resource "aws_ecs_task_definition" "web" {
         protocol      = "tcp"
       }]
       environment = [
-        { name = "NEXT_PUBLIC_API_BASE_URL", value = "http://${aws_lb.this.dns_name}:8080" }
+        { name = "API_ORIGIN", value = "http://${aws_lb.this.dns_name}:8080" },
+        { name = "APP_ORIGIN", value = "http://${aws_lb.this.dns_name}" },
+        { name = "AUTH_PROVIDER", value = var.auth_provider },
+        { name = "COGNITO_CLIENT_ID", value = var.cognito_client_id },
+        { name = "COGNITO_DOMAIN", value = var.cognito_domain }
       ]
       logConfiguration = {
         logDriver = "awslogs"

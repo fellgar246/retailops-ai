@@ -90,3 +90,23 @@ output "bedrock_model_id" {
 output "bedrock_inference_profile_id" {
   value = module.foundation.bedrock_inference_profile_id
 }
+
+output "identity_user_pool_id" {
+  description = "User pool backing application sign-in."
+  value       = module.foundation.identity_user_pool_id
+}
+
+output "identity_client_id" {
+  description = "Application client id used as the token audience."
+  value       = module.foundation.identity_client_id
+}
+
+output "identity_issuer" {
+  description = "OpenID Connect issuer for the user pool."
+  value       = module.foundation.identity_issuer
+}
+
+output "identity_hosted_domain" {
+  description = "Hosted sign-in domain prefix."
+  value       = module.foundation.identity_hosted_domain
+}

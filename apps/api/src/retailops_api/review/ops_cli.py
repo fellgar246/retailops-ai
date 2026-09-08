@@ -21,6 +21,7 @@ from sqlalchemy.orm import Session
 
 from retailops_api.db.session import get_session_factory
 from retailops_api.domain.models.review import ReviewCase
+from retailops_api.identity.types import Principal, Role
 from retailops_api.review.cases import (
     ReviewFilters,
     ReviewPriority,
@@ -170,18 +171,38 @@ def _cmd_queue(args: argparse.Namespace) -> int:
     return 0
 
 
+def _operator(name: str) -> Principal:
+    """Identity for an operator acting through the command line.
+
+    No identity provider vouched for this actor, so the decision is recorded
+    with a display name and without a verified subject.
+    """
+
+    return Principal(
+        subject=f"operator:{name.strip()}",
+        display_name=name.strip(),
+        email=None,
+        roles=frozenset({Role.reviewer}),
+        verified=False,
+    )
+
+
 def _cmd_start(args: argparse.Namespace) -> int:
-    return _mutate(lambda session: start_review(session, args.case_id, reviewer=args.reviewer))
+    return _mutate(
+        lambda session: start_review(session, args.case_id, actor=_operator(args.reviewer))
+    )
 
 
 def _cmd_assign(args: argparse.Namespace) -> int:
-    return _mutate(lambda session: assign_review(session, args.case_id, reviewer=args.reviewer))
+    return _mutate(
+        lambda session: assign_review(session, args.case_id, actor=_operator(args.reviewer))
+    )
 
 
 def _cmd_approve(args: argparse.Namespace) -> int:
     return _mutate(
         lambda session: approve_review(
-            session, args.case_id, reviewer=args.reviewer, comment=args.comment
+            session, args.case_id, actor=_operator(args.reviewer), comment=args.comment
         )
     )
 
@@ -191,7 +212,7 @@ def _cmd_reject(args: argparse.Namespace) -> int:
         lambda session: reject_review(
             session,
             args.case_id,
-            reviewer=args.reviewer,
+            actor=_operator(args.reviewer),
             reason=args.reason,
             comment=args.comment,
         )
@@ -208,7 +229,7 @@ def _cmd_correct(args: argparse.Namespace) -> int:
         lambda session: correct_review(
             session,
             args.case_id,
-            reviewer=args.reviewer,
+            actor=_operator(args.reviewer),
             correction=correction,
             comment=args.comment,
         )
@@ -218,7 +239,7 @@ def _cmd_correct(args: argparse.Namespace) -> int:
 def _cmd_cancel(args: argparse.Namespace) -> int:
     return _mutate(
         lambda session: cancel_review(
-            session, args.case_id, reviewer=args.reviewer, comment=args.comment
+            session, args.case_id, actor=_operator(args.reviewer), comment=args.comment
         )
     )
 

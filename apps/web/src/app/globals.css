@@ -734,3 +734,25 @@ table.data tbody tr[data-selected='true'] {
     display: none;
   }
 }
+
+/* Sign-in sits outside the operations shell and centres on its own. */
+.signin {
+  display: grid;
+  place-items: center;
+  min-height: 100vh;
+  padding: 2rem;
+}
+
+.signin .panel {
+  width: min(24rem, 100%);
+}
+
+.signin h1 {
+  margin-bottom: 0.25rem;
+}
+
+.signin form {
+  display: grid;
+  gap: 0.75rem;
+  margin-top: 1rem;
+}

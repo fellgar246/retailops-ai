@@ -11,11 +11,18 @@ from retailops_api.core.aws import (
     AwsConfig,
 )
 from retailops_api.core.limits import (
+    DEFAULT_DECISION_RATE_LIMIT,
+    DEFAULT_DECISION_RATE_WINDOW_SECONDS,
     DEFAULT_DOCUMENTS_PREFIX,
     DEFAULT_MAX_PROMPT_CHARS,
+    DEFAULT_MAX_REQUEST_BYTES,
     DEFAULT_MAX_TEXTRACT_SYNC_PAGES,
     DEFAULT_MAX_UPLOAD_BYTES,
 )
+from retailops_api.identity.types import DEFAULT_TOKEN_TTL_SECONDS
+
+#: Environments that may publish interactive API documentation.
+SCHEMA_ENVIRONMENTS = frozenset({"local", "test", "dev"})
 
 
 class Settings(BaseSettings):
@@ -58,6 +65,16 @@ class Settings(BaseSettings):
     paddleocr_device: str = "cpu"
     paddleocr_max_pages: int = Field(default=10, ge=1)
 
+    # Identity. The local provider signs its own development tokens; the hosted
+    # provider validates tokens issued by a Cognito user pool. Selection is
+    # explicit and never inferred from the AWS feature flags.
+    auth_provider: Literal["local", "cognito"] = "local"
+    auth_local_secret: SecretStr = SecretStr("")
+    auth_local_ttl_seconds: int = Field(default=DEFAULT_TOKEN_TTL_SECONDS, ge=60)
+    cognito_user_pool_id: str = ""
+    cognito_client_id: str = ""
+    cognito_region: str = ""
+
     # AWS stays disabled unless explicitly enabled. Feature flags cannot turn
     # adapters on by themselves.
     aws_enabled: bool = False
@@ -98,6 +115,9 @@ class Settings(BaseSettings):
         validation_alias=AliasChoices("BEDROCK_ENABLED", "AWS_USE_BEDROCK"),
     )
     aws_use_sagemaker_registry: bool = False
+    max_request_bytes: int = DEFAULT_MAX_REQUEST_BYTES
+    decision_rate_limit: int = Field(default=DEFAULT_DECISION_RATE_LIMIT, ge=1)
+    decision_rate_window_seconds: int = Field(default=DEFAULT_DECISION_RATE_WINDOW_SECONDS, ge=1)
     max_upload_bytes: int = DEFAULT_MAX_UPLOAD_BYTES
     max_textract_sync_pages: int = DEFAULT_MAX_TEXTRACT_SYNC_PAGES
     max_prompt_chars: int = DEFAULT_MAX_PROMPT_CHARS
@@ -108,6 +128,25 @@ class Settings(BaseSettings):
         if isinstance(value, str):
             return [origin.strip() for origin in value.split(",") if origin.strip()]
         return value
+
+    @property
+    def cognito_issuer(self) -> str:
+        """Issuer URL published by the user pool."""
+        region = self.cognito_region.strip() or self.aws_region.strip()
+        pool = self.cognito_user_pool_id.strip()
+        if not region or not pool:
+            return ""
+        return f"https://cognito-idp.{region}.amazonaws.com/{pool}"
+
+    @property
+    def cognito_jwks_uri(self) -> str:
+        issuer = self.cognito_issuer
+        return f"{issuer}/.well-known/jwks.json" if issuer else ""
+
+    @property
+    def serves_api_schema(self) -> bool:
+        """Only a developer environment publishes the OpenAPI surface."""
+        return self.environment.strip().lower() in SCHEMA_ENVIRONMENTS
 
     def aws_config(self) -> AwsConfig:
         environment_name = self.aws_environment_name.strip() or self.environment

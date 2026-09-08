@@ -5,7 +5,7 @@ import { FormEvent, useState } from 'react';
 
 import { ApiHealthIndicator } from '@/components/ApiHealthIndicator';
 import { ENVIRONMENT_LABELS, labelOf } from '@/lib/labels';
-import { readReviewer } from '@/lib/reviewer';
+import { useSession } from '@/lib/use-session';
 
 interface TopBarProps {
   environment: string;
@@ -14,7 +14,7 @@ interface TopBarProps {
 export function TopBar({ environment }: TopBarProps) {
   const router = useRouter();
   const [query, setQuery] = useState('');
-  const [reviewer] = useState(() => readReviewer());
+  const { session, signOut } = useSession();
 
   const onSearch = (event: FormEvent) => {
     event.preventDefault();
@@ -42,10 +42,17 @@ export function TopBar({ environment }: TopBarProps) {
       <div className="topbar__meta">
         <span className="env-badge">{labelOf(ENVIRONMENT_LABELS, environment)}</span>
         <ApiHealthIndicator />
-        <div className="profile">
-          <strong>{reviewer}</strong>
-          <span className="muted">Operaciones</span>
-        </div>
+        {session?.user ? (
+          <div className="profile">
+            <strong>{session.user.name}</strong>
+            <span className="muted">
+              {session.user.roles.includes('reviewer') ? 'Revisor' : 'Solo lectura'}
+            </span>
+            <button className="btn" onClick={() => void signOut()} type="button">
+              Cerrar sesión
+            </button>
+          </div>
+        ) : null}
       </div>
     </header>
   );

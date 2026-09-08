@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 
 import { AppShell } from '@/components/shell/AppShell';
@@ -13,6 +13,19 @@ vi.mock('@/components/ApiHealthIndicator', () => ({
   ApiHealthIndicator: () => <div>API connected</div>,
 }));
 
+// The shell only frames a page once a session exists.
+vi.mock('@/lib/use-session', () => ({
+  useSession: () => ({
+    session: {
+      provider: 'local',
+      user: { name: 'Ana', email: null, roles: ['reviewer'] },
+    },
+    loading: false,
+    signOut: vi.fn(),
+  }),
+  canDecide: () => true,
+}));
+
 describe('AppShell', () => {
   it('renders the primary operations navigation', async () => {
     render(
@@ -21,7 +34,9 @@ describe('AppShell', () => {
       </AppShell>,
     );
 
-    expect(screen.getByRole('navigation', { name: 'Navegación principal' })).toBeInTheDocument();
+    await waitFor(() =>
+      expect(screen.getByRole('navigation', { name: 'Navegación principal' })).toBeInTheDocument(),
+    );
     expect(screen.getByRole('link', { name: /Overview/ })).toHaveAttribute('href', '/');
     expect(screen.getByRole('link', { name: /Revisiones/ })).toHaveAttribute('href', '/reviews');
     expect(screen.getByRole('link', { name: /Pronósticos/ })).toHaveAttribute('href', '/forecasts');

@@ -8,6 +8,7 @@ from typing import Any
 from sqlalchemy.orm import Session
 
 from retailops_api.domain.models.review import ReviewCase
+from retailops_api.identity.types import Principal, Role
 from retailops_api.review.mock import canned_output
 from retailops_api.review.persist import create_review_case
 from retailops_api.review.schemas import parse_review_result
@@ -19,6 +20,17 @@ from tests.factories import (
     make_supplier_document,
     make_supplier_invoice,
 )
+
+
+def person(name: str, *, role: Role = Role.reviewer) -> Principal:
+    """A verified principal standing in for a signed-in operator."""
+
+    return Principal(
+        subject=f"subject-{name}",
+        display_name=name,
+        email=f"{name}@example.test",
+        roles=frozenset({role}),
+    )
 
 
 def finding_case(
