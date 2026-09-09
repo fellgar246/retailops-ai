@@ -13,7 +13,7 @@ Two IAM graphs exist. **`iam_foundation`** is applied in `dev` today.
 |---|---|---|
 | ECS execution | `ecs-tasks.amazonaws.com` | Pull images from the two ECR repos; write future `/ecs/{prefix}-*` log streams; `GetSecretValue` on the database and application secret ARNs |
 | API task | `ecs-tasks.amazonaws.com` | Documents bucket objects and list; `GetSecretValue` on the two secret ARNs; `bedrock:InvokeModel` on Claude Haiku 4.5 and the US inference profile. No Textract, SQS or Step Functions |
-| Document processor | `ecs-tasks.amazonaws.com` | Read/write `supplier-documents/*`, `block13/*` and `documents/*`; Textract analyze/detect. No secrets, no queues, no Bedrock |
+| Document processor | `ecs-tasks.amazonaws.com` | Read/write `supplier-documents/*`, `live-smoke/*` and `documents/*`; Textract analyze/detect. No secrets, no queues, no Bedrock |
 | ML | `sagemaker.amazonaws.com` | Read/write `models/*` in the documents bucket. No training or package-group APIs yet |
 
 A Step Functions callback role is not created until a state machine

@@ -40,7 +40,7 @@ from retailops_api.review.contract import build_request
 from retailops_api.review.types import ReconciliationExplanationInput, ReviewType
 
 DEFAULT_REGION = "us-east-1"
-SMOKE_FILENAME = "block13-smoke.txt"
+SMOKE_FILENAME = "live-smoke.txt"
 
 
 def expected_account_id() -> str:
@@ -117,7 +117,7 @@ def smoke_s3(
     region = region or smoke_region()
     bucket = bucket or documents_bucket()
     store = S3DocumentStorage(s3 or s3_client(region), bucket=bucket, prefix=prefix)
-    payload = b"retailops-block13-s3-smoke\n"
+    payload = b"retailops-live-s3-smoke\n"
     stored = store.save(payload, filename=SMOKE_FILENAME, media_type="text/plain")
     try:
         meta = store.metadata(stored.key)
@@ -188,7 +188,7 @@ def smoke_bedrock(
             actual_value="12",
             financial_impact=Decimal("20.00"),
         ),
-        case_id="block13-smoke",
+        case_id="live-smoke",
     )
     result = reviewer.review(request)
     usage = reviewer.last_usage

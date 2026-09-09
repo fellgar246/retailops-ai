@@ -9,7 +9,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 DEFAULT_DOCUMENTS_PREFIX = "supplier-documents"
-LIVE_SMOKE_PREFIX = "block13"
+LIVE_SMOKE_PREFIX = "live-smoke"
 DEFAULT_MAX_UPLOAD_BYTES = 5 * 1024 * 1024
 DEFAULT_MAX_TEXTRACT_SYNC_PAGES = 5
 DEFAULT_MAX_PROMPT_CHARS = 24_000

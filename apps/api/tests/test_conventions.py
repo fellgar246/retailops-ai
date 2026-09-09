@@ -127,7 +127,9 @@ def test_alembic_discovers_the_domain_metadata() -> None:
 # Planning documents are not part of the delivered system. Shipped text must
 # describe capabilities, not numbered planning artefacts.
 _PLANNING_REFERENCE = re.compile(
-    r"\bSpec\s+\d+\b|\bBlock\s+\d+\b|\blater\s+block\b|\bnext\s+block\b|\bCloud Boundary\b",
+    # The separator is optional. The compact form had reached an S3 key prefix
+    # and an IAM policy, where the spaced prose pattern would not have found it.
+    r"\bSpec\s*\d+\b|\bBlock\s*\d+\b|\blater\s+block\b|\bnext\s+block\b|\bCloud Boundary\b",
     re.IGNORECASE,
 )
 _SHIPPED_TEXT_SUFFIXES = {".py", ".md", ".ts", ".tsx", ".css"}

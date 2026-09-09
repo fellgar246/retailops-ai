@@ -13,7 +13,7 @@ from retailops_api.documents.types import StorageError
 def test_source_object_key_is_reconstructable() -> None:
     key = "a" * 32
     assert source_object_key(key) == f"{DEFAULT_DOCUMENTS_PREFIX}/{key}/source/payload"
-    assert source_object_key(key, prefix=LIVE_SMOKE_PREFIX) == f"block13/{key}/source/payload"
+    assert source_object_key(key, prefix=LIVE_SMOKE_PREFIX) == f"live-smoke/{key}/source/payload"
 
 
 def test_source_object_key_rejects_path_traversal() -> None:

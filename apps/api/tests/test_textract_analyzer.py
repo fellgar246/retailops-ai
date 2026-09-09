@@ -66,9 +66,9 @@ def test_textract_analyze_s3_uses_object_reference() -> None:
     payload = json.loads((FIXTURES / "supplier_sheet_table.json").read_text(encoding="utf-8"))
     client = FakeTextract(payload)
     analyzer = TextractDocumentAnalyzer(client)
-    result = analyzer.analyze_s3(bucket="docs", key="block13/a/source/payload")
+    result = analyzer.analyze_s3(bucket="docs", key="live-smoke/a/source/payload")
     assert client.calls[0]["Document"] == {
-        "S3Object": {"Bucket": "docs", "Name": "block13/a/source/payload"}
+        "S3Object": {"Bucket": "docs", "Name": "live-smoke/a/source/payload"}
     }
     assert result.rows[0].supplier_sku == "NW-SODA-330"
 

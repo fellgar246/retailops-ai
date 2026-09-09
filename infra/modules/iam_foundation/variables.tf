@@ -37,7 +37,7 @@ variable "model_artifact_prefix" {
 variable "document_object_prefixes" {
   type        = list(string)
   description = "S3 key prefixes the document-processor role may read and write."
-  default     = ["supplier-documents", "block13", "documents"]
+  default     = ["supplier-documents", "live-smoke", "documents"]
 }
 
 variable "bedrock_model_id" {
