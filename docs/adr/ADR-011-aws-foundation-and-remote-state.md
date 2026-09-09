@@ -7,11 +7,11 @@
 
 ## Context
 
-Block 11 expressed AWS infrastructure as modules and kept every adapter
-behind `AWS_ENABLED=false`. No live resources were created. Block 12
-needs a real account, a remote state backend and a disposable `dev`
-foundation so later blocks can attach S3, Textract and Bedrock without
-inventing names or IAM in the console.
+AWS infrastructure was expressed as Terraform modules with every adapter
+held behind `AWS_ENABLED=false`, and no live resources had been created.
+Attaching S3, Textract and Bedrock needs a real account, a remote state
+backend and a disposable `dev` foundation, so that names and IAM are not
+invented in the console when the adapters are switched on.
 
 The full `platform` composition still includes ECS, RDS, Step Functions
 and a SageMaker model package group. Those remain out of scope.
@@ -79,7 +79,7 @@ not cut the application over to AWS.
 **Positive**
 
 - `dev` can be planned, applied, inspected, destroyed and recreated.
-- Later blocks receive stable names, role ARNs and a documents bucket.
+- Later work receives stable names, role ARNs and a documents bucket.
 - State is remote, encrypted and isolated from application objects.
 
 **Negative**
@@ -91,5 +91,5 @@ not cut the application over to AWS.
 
 **Deferred**
 
-- Live S3 / Textract / Bedrock adapter cutover (Block 13)
+- Live S3 / Textract / Bedrock adapter cutover
 - ECS, RDS, TLS, CI/CD, staging and prod

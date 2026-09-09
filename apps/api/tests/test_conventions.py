@@ -140,6 +140,7 @@ _SHIPPED_ROOTS = (
     API_ROOT.parents[1] / "apps" / "web" / "src",
     API_ROOT.parents[1] / "apps" / "web" / "tests",
     API_ROOT.parents[1] / "apps" / "web" / "README.md",
+    API_ROOT.parents[1] / "docs" / "adr",
     API_ROOT.parents[1] / "docs" / "architecture",
     API_ROOT.parents[1] / "reserved-docs" / "runbooks",
     API_ROOT.parents[1] / "infra",
@@ -150,6 +151,23 @@ def _is_shipped_text(path: Path) -> bool:
     if any(part in {".terraform", ".git"} for part in path.parts):
         return False
     return path.is_file() and (path.suffix in _SHIPPED_TEXT_SUFFIXES or path.name == "Makefile")
+
+
+#: Directories that are deliberately not published. Shipped text must not link
+#: into them, or the link is dead for every reader of the repository.
+_UNPUBLISHED_LINK = re.compile(r"\]\(([^)]*\.\./)?(reserved-docs|runbooks)/")
+
+
+def test_shipped_text_does_not_link_to_unpublished_documents() -> None:
+    hits: list[str] = []
+    for root in _SHIPPED_ROOTS:
+        paths = [root] if root.is_file() else root.rglob("*")
+        for path in paths:
+            if not _is_shipped_text(path) or path.suffix != ".md":
+                continue
+            for match in _UNPUBLISHED_LINK.finditer(path.read_text(encoding="utf-8")):
+                hits.append(f"{path}:{match.group(0)}")
+    assert hits == []
 
 
 def test_shipped_text_does_not_refer_to_planning_artefacts() -> None:

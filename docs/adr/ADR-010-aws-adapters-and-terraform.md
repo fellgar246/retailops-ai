@@ -84,8 +84,8 @@ callback APIs. Assumptions that need a live account are listed in
   alarms.
 
 Live S3, Textract and Bedrock sit behind the existing adapter
-contracts. Local `AWS_ENABLED=false` remains the default. See
-[aws-ai-services.md](../runbooks/aws-ai-services.md).
+contracts. Local `AWS_ENABLED=false` remains the default. Operating them
+against a real account is covered by the AWS AI services runbook.
 
 Remote Terraform state and the first `dev` apply are recorded in
 [ADR-011](ADR-011-aws-foundation-and-remote-state.md).

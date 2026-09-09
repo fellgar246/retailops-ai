@@ -48,8 +48,8 @@ actually selected.
 `S3DocumentStorage` implements `DocumentStorage`: save, read, open, exists,
 metadata, delete. Logical keys remain 32-hex identifiers stored in the
 database. The object key is `{prefix}/{key}/source/payload`. Filename,
-media type and SHA-256 live in object metadata. Live smoke uses prefix
-`block13`. See [aws-ai-services.md](../runbooks/aws-ai-services.md).
+media type and SHA-256 live in object metadata. Live smoke writes under its own
+prefix so probe objects never mix with supplier documents.
 
 The client is injected. Tests use an in-memory stub.
 
