@@ -68,7 +68,7 @@ Configuration lives in environment variables. `make setup` copies
 | `DOCUMENT_STORAGE_ROOT`    | Local root for stored supplier files (optional; default `data/documents`) |
 | `AWS_ENABLED`              | Master switch for cloud adapters (default `false`) |
 | `AWS_REGION`               | Region used when a cloud adapter is enabled |
-| `AWS_ACCOUNT_ID`           | Account id for ARN construction (empty locally) |
+| `AWS_ACCOUNT_ID`           | Account id for ARN construction, and the account the live smoke checks it is pointing at (empty locally) |
 | `AWS_ENVIRONMENT_NAME`     | Name segment for `{prefix}-{environment}-…` resources |
 | `AWS_RESOURCE_PREFIX`      | Shared resource prefix (default `retailops`) |
 | `AWS_DOCUMENTS_BUCKET`     | Object-store bucket when S3 storage is enabled |

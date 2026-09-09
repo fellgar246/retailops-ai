@@ -5,8 +5,8 @@ from __future__ import annotations
 import pytest
 
 from retailops_api.ops.live import (
-    DEFAULT_DOCUMENTS_BUCKET,
-    EXPECTED_ACCOUNT_ID,
+    documents_bucket,
+    expected_account_id,
     preflight,
     smoke_bedrock,
     smoke_s3,
@@ -24,9 +24,9 @@ def test_preflight_account_and_bucket() -> None:
     _require_boto3()
     results = {item.name: item for item in preflight()}
     assert results["caller_identity"].ok, results["caller_identity"].detail
-    assert EXPECTED_ACCOUNT_ID in results["caller_identity"].detail
+    assert expected_account_id() in results["caller_identity"].detail
     assert results["documents_bucket"].ok
-    assert DEFAULT_DOCUMENTS_BUCKET in results["documents_bucket"].detail
+    assert documents_bucket() in results["documents_bucket"].detail
 
 
 def test_s3_roundtrip() -> None:

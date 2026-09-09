@@ -18,6 +18,7 @@ from retailops_api.core.aws import (
     DEFAULT_BEDROCK_INFERENCE_PROFILE_ID,
     DEFAULT_BEDROCK_MODEL_ID,
     AwsConfig,
+    AwsConfigError,
 )
 from retailops_api.core.clients import (
     bedrock_client,
@@ -25,6 +26,7 @@ from retailops_api.core.clients import (
     s3_client,
     textract_client,
 )
+from retailops_api.core.config import get_settings
 from retailops_api.documents.keys import LIVE_SMOKE_PREFIX, source_object_key
 from retailops_api.documents.s3 import S3DocumentStorage
 from retailops_api.documents.textract import TextractDocumentAnalyzer
@@ -37,10 +39,33 @@ from retailops_api.review.bedrock import BedrockAIReviewer
 from retailops_api.review.contract import build_request
 from retailops_api.review.types import ReconciliationExplanationInput, ReviewType
 
-EXPECTED_ACCOUNT_ID = "168629931092"
-DEFAULT_DOCUMENTS_BUCKET = "retailops-ai-dev-documents-168629931092"
 DEFAULT_REGION = "us-east-1"
 SMOKE_FILENAME = "block13-smoke.txt"
+
+
+def expected_account_id() -> str:
+    """Account the smoke run must be pointing at.
+
+    Kept in configuration rather than in the source: the value names a real
+    account, and the guard below is only meaningful when the operator states
+    which one they mean.
+    """
+
+    value = get_settings().aws_account_id.strip()
+    if not value:
+        raise AwsConfigError("AWS_ACCOUNT_ID must be set before running the live smoke")
+    return value
+
+
+def documents_bucket() -> str:
+    value = get_settings().aws_documents_bucket.strip()
+    if not value:
+        raise AwsConfigError("AWS_DOCUMENTS_BUCKET must be set before running the live smoke")
+    return value
+
+
+def smoke_region() -> str:
+    return get_settings().aws_region.strip() or DEFAULT_REGION
 
 
 @dataclass(frozen=True)
@@ -52,13 +77,16 @@ class SmokeResult:
 
 def preflight(
     *,
-    region: str = DEFAULT_REGION,
-    bucket: str = DEFAULT_DOCUMENTS_BUCKET,
+    region: str | None = None,
+    bucket: str | None = None,
     sts: Any | None = None,
     s3: Any | None = None,
     textract: Any | None = None,
     bedrock: Any | None = None,
 ) -> list[SmokeResult]:
+    region = region or smoke_region()
+    bucket = bucket or documents_bucket()
+    expected = expected_account_id()
     results: list[SmokeResult] = []
     client = sts or _sts_client(region)
     identity = client.get_caller_identity()
@@ -66,7 +94,7 @@ def preflight(
     results.append(
         SmokeResult(
             "caller_identity",
-            account == EXPECTED_ACCOUNT_ID,
+            account == expected,
             f"account={account} arn={identity.get('Arn')}",
         )
     )
@@ -80,12 +108,14 @@ def preflight(
 
 def smoke_s3(
     *,
-    bucket: str = DEFAULT_DOCUMENTS_BUCKET,
-    region: str = DEFAULT_REGION,
+    bucket: str | None = None,
+    region: str | None = None,
     prefix: str = LIVE_SMOKE_PREFIX,
     s3: Any | None = None,
     cleanup: bool = True,
 ) -> SmokeResult:
+    region = region or smoke_region()
+    bucket = bucket or documents_bucket()
     store = S3DocumentStorage(s3 or s3_client(region), bucket=bucket, prefix=prefix)
     payload = b"retailops-block13-s3-smoke\n"
     stored = store.save(payload, filename=SMOKE_FILENAME, media_type="text/plain")
@@ -106,13 +136,15 @@ def smoke_s3(
 
 def smoke_textract(
     *,
-    bucket: str = DEFAULT_DOCUMENTS_BUCKET,
-    region: str = DEFAULT_REGION,
+    bucket: str | None = None,
+    region: str | None = None,
     prefix: str = LIVE_SMOKE_PREFIX,
     s3: Any | None = None,
     textract: Any | None = None,
     cleanup: bool = True,
 ) -> SmokeResult:
+    region = region or smoke_region()
+    bucket = bucket or documents_bucket()
     case = CORPUS_CASES[0]
     data = case_bytes(case)
     store = S3DocumentStorage(s3 or s3_client(region), bucket=bucket, prefix=prefix)
@@ -134,10 +166,11 @@ def smoke_textract(
 
 def smoke_bedrock(
     *,
-    region: str = DEFAULT_REGION,
+    region: str | None = None,
     model_id: str = DEFAULT_BEDROCK_INFERENCE_PROFILE_ID,
     bedrock: Any | None = None,
 ) -> SmokeResult:
+    region = region or smoke_region()
     reviewer = BedrockAIReviewer(
         bedrock or bedrock_runtime_client(region),
         model_id=model_id,
@@ -170,18 +203,18 @@ def smoke_bedrock(
 def default_aws_config(
     *,
     enabled: bool = True,
-    bucket: str = DEFAULT_DOCUMENTS_BUCKET,
+    bucket: str | None = None,
     prefix: str = LIVE_SMOKE_PREFIX,
     model_id: str = DEFAULT_BEDROCK_MODEL_ID,
     inference_profile_id: str = DEFAULT_BEDROCK_INFERENCE_PROFILE_ID,
 ) -> AwsConfig:
     return AwsConfig(
         enabled=enabled,
-        region=DEFAULT_REGION,
-        account_id=EXPECTED_ACCOUNT_ID,
+        region=smoke_region(),
+        account_id=expected_account_id(),
         environment_name="dev",
         resource_prefix="retailops-ai",
-        documents_bucket=bucket,
+        documents_bucket=bucket or documents_bucket(),
         documents_prefix=prefix,
         bedrock_model_id=model_id,
         bedrock_inference_profile_id=inference_profile_id,
@@ -303,8 +336,8 @@ def _print(result: SmokeResult) -> None:
 def _parse_args(argv: Sequence[str] | None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(prog="retailops-aws-smoke")
     parser.add_argument("command", choices=("preflight", "s3", "textract", "bedrock"))
-    parser.add_argument("--region", default=DEFAULT_REGION)
-    parser.add_argument("--bucket", default=DEFAULT_DOCUMENTS_BUCKET)
+    parser.add_argument("--region", default=None)
+    parser.add_argument("--bucket", default=None)
     parser.add_argument("--model-id", default=DEFAULT_BEDROCK_INFERENCE_PROFILE_ID)
     parser.add_argument("--keep", action="store_true", help="Leave smoke objects in the bucket.")
     return parser.parse_args(argv)
