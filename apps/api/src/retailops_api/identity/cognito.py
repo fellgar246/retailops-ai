@@ -105,7 +105,11 @@ class CognitoIdentityVerifier:
             raise InvalidTokenError("token is not an identity token")
 
         subject = str(claims.get("sub", ""))
-        name = claims.get("name") or claims.get("cognito:username") or subject
+        # A pool that signs people in by email generates an opaque internal
+        # username, so it ranks below the email as something a human reads.
+        name = (
+            claims.get("name") or claims.get("email") or claims.get("cognito:username") or subject
+        )
         email = claims.get("email")
         return Principal(
             subject=subject,

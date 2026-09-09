@@ -44,11 +44,13 @@ export function TopBar({ environment }: TopBarProps) {
         <ApiHealthIndicator />
         {session?.user ? (
           <div className="profile">
-            <strong>{session.user.name}</strong>
-            <span className="muted">
-              {session.user.roles.includes('reviewer') ? 'Revisor' : 'Solo lectura'}
+            <span className="profile__identity">
+              <strong title={session.user.name}>{session.user.name}</strong>
+              <span className="muted">
+                {session.user.roles.includes('reviewer') ? 'Revisor' : 'Solo lectura'}
+              </span>
             </span>
-            <button className="btn" onClick={() => void signOut()} type="button">
+            <button className="btn btn--compact" onClick={() => void signOut()} type="button">
               Cerrar sesión
             </button>
           </div>

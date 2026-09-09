@@ -49,6 +49,9 @@ def _token(key: rsa.RSAPrivateKey, **overrides: Any) -> str:
         "exp": int((now + timedelta(minutes=10)).timestamp()),
     }
     claims.update(overrides)
+    # An absent claim is expressed as None by the caller and dropped here, so a
+    # test can describe a token that simply lacks a name or an email.
+    claims = {key_: value for key_, value in claims.items() if value is not None}
     return jwt.encode(claims, key, algorithm="RS256", headers={"kid": KEY_ID})
 
 
@@ -74,6 +77,47 @@ def test_a_valid_token_maps_onto_a_principal(
     assert principal.email == "ana@example.test"
     assert principal.roles == frozenset({Role.reviewer})
     assert principal.audit_subject == "cognito-subject-1"
+
+
+def test_the_email_outranks_the_generated_username(
+    verifier: CognitoIdentityVerifier, signing_key: rsa.RSAPrivateKey
+) -> None:
+    """A pool that signs people in by email issues an opaque internal username.
+
+    That identifier must never become what the audit trail shows as the person,
+    so the email is preferred whenever no display name was set.
+    """
+
+    token = _token(
+        signing_key,
+        name=None,
+        email="ana@example.test",
+        **{"cognito:username": "7468c478-80f1-7095-3236-9d5e04f0fa09"},
+    )
+    principal = verifier.verify(token)
+
+    assert principal.display_name == "ana@example.test"
+
+
+def test_the_generated_username_is_used_only_as_a_last_resort(
+    verifier: CognitoIdentityVerifier, signing_key: rsa.RSAPrivateKey
+) -> None:
+    token = _token(
+        signing_key,
+        name=None,
+        email=None,
+        **{"cognito:username": "operator-42"},
+    )
+
+    assert verifier.verify(token).display_name == "operator-42"
+
+
+def test_a_display_name_outranks_everything(
+    verifier: CognitoIdentityVerifier, signing_key: rsa.RSAPrivateKey
+) -> None:
+    token = _token(signing_key, name="Ana Operator", email="ana@example.test")
+
+    assert verifier.verify(token).display_name == "Ana Operator"
 
 
 def test_groups_we_do_not_model_are_ignored(

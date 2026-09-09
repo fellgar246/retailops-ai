@@ -54,7 +54,11 @@ export async function readSession(): Promise<SessionUser | null> {
       return null;
     }
     return {
-      name: String(claims.name ?? claims['cognito:username'] ?? claims.sub ?? 'unknown'),
+      // A pool that signs people in by email generates an opaque internal
+      // username, so it ranks below the email as something a human reads.
+      name: String(
+        claims.name ?? claims.email ?? claims['cognito:username'] ?? claims.sub ?? 'unknown',
+      ),
       email: typeof claims.email === 'string' ? claims.email : null,
       roles: readRoles(claims),
     };
