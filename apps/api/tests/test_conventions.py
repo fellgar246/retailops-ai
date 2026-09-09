@@ -141,7 +141,7 @@ _SHIPPED_ROOTS = (
     API_ROOT.parents[1] / "apps" / "web" / "tests",
     API_ROOT.parents[1] / "apps" / "web" / "README.md",
     API_ROOT.parents[1] / "docs" / "architecture",
-    API_ROOT.parents[1] / "docs" / "runbooks",
+    API_ROOT.parents[1] / "reserved-docs" / "runbooks",
     API_ROOT.parents[1] / "infra",
 )
 

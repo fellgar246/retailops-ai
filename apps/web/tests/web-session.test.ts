@@ -47,9 +47,9 @@ describe('readSession', () => {
     // Showing it would put an identifier where a person's name belongs, and it
     // would reach the audit trail through the same claim.
     const session = await signedInWith({
-      sub: '7468c478-80f1-7095-3236-9d5e04f0fa09',
+      sub: '00000000-1111-2222-3333-444444444444',
       email: 'reviewer@retailops.test',
-      'cognito:username': '7468c478-80f1-7095-3236-9d5e04f0fa09',
+      'cognito:username': '00000000-1111-2222-3333-444444444444',
       'cognito:groups': ['reviewer'],
     });
 

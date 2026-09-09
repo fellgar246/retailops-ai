@@ -92,7 +92,7 @@ def test_the_email_outranks_the_generated_username(
         signing_key,
         name=None,
         email="ana@example.test",
-        **{"cognito:username": "7468c478-80f1-7095-3236-9d5e04f0fa09"},
+        **{"cognito:username": "00000000-1111-2222-3333-444444444444"},
     )
     principal = verifier.verify(token)
 

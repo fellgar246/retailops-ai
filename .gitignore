@@ -61,7 +61,9 @@ artifacts/models/*
 .ipynb_checkpoints/
 
 # --- Docs ---
-docs/
+# Architecture decisions and architecture notes are part of the delivered
+# system. Runbooks and planning material carry live infrastructure identifiers
+# and internal assessments, and stay out of the repository.
 reserved-docs/
 
 # --- OS / editors ---
