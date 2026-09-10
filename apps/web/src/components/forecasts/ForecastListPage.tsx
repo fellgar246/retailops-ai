@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { getForecasts } from '@/lib/api';
 import { formatDate, formatDateTime, formatNumber, formatPercent } from '@/lib/format';
 import { FORECAST_STATUS_LABELS } from '@/lib/labels';
+import { ForecastTrigger } from '@/components/forecasts/ForecastTrigger';
 import { hasFailed, useResource } from '@/lib/use-resource';
 import { Badge } from '@/components/ui/Badge';
 import { DataTable } from '@/components/ui/DataTable';
@@ -49,6 +50,7 @@ export function ForecastListPage() {
         description={`${resource.data.total} ejecuciones. WAPE y sesgo aparecen cuando hay evaluación.`}
         title="Pronósticos"
       />
+      <ForecastTrigger onSettled={resource.reload} />
       <FreshnessBar
         error={resource.error}
         onRefresh={resource.reload}

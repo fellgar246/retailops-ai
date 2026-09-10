@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation';
 
 import { getReconciliations } from '@/lib/api';
 import { formatDateTime, formatMoney, formatNumber } from '@/lib/format';
+import { ReconciliationTrigger } from '@/components/reconciliations/ReconciliationTrigger';
 import { hasFailed, useResource } from '@/lib/use-resource';
 import { DataTable } from '@/components/ui/DataTable';
 import { EmptyState } from '@/components/ui/EmptyState';
@@ -47,6 +48,7 @@ export function ReconciliationListPage() {
         description={`${resource.data.total} ejecuciones. El impacto es la suma firmada de excepciones.`}
         title="Conciliaciones"
       />
+      <ReconciliationTrigger onSettled={resource.reload} />
       <FreshnessBar
         error={resource.error}
         onRefresh={resource.reload}

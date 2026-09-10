@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { getDocuments } from '@/lib/api';
 import { formatDateTime, formatNumber } from '@/lib/format';
 import { DOCUMENT_STATUS_LABELS, SEVERITY_LABELS } from '@/lib/labels';
+import { DocumentUpload } from '@/components/documents/DocumentUpload';
 import { hasFailed, useResource } from '@/lib/use-resource';
 import { Badge } from '@/components/ui/Badge';
 import { DataTable } from '@/components/ui/DataTable';
@@ -50,6 +51,7 @@ export function DocumentListPage() {
         description="Hojas de oferta procesadas, con hallazgos determinísticos."
         title="Documentos de proveedor"
       />
+      <DocumentUpload onSettled={resource.reload} />
       <FreshnessBar
         error={resource.error}
         onRefresh={resource.reload}

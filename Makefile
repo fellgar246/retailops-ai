@@ -4,7 +4,7 @@ UV := uv --directory $(API_DIR)
 NPM := npm --prefix $(WEB_DIR)
 
 .DEFAULT_GOAL := help
-.PHONY: help setup env ready demo check check-app check-infra ml-smoke perf \
+.PHONY: help setup env ready demo check check-app check-infra ml-smoke perf worker \
         dev api web db-up db-down db-logs db-shell migrate migration \
         autogenerate db-reset seed synthetic forecast train documents reconcile \
         review-eval reviews review-feedback aws-smoke \
@@ -83,6 +83,9 @@ reconcile: ## Three-way match: make reconcile supplier=SUP-BEVCO invoice=INV-100
 
 review-eval: ## Score the mock reviewer on the versioned evaluation cases
 	cd $(API_DIR) && uv run retailops-review-eval --output "$(CURDIR)/data/reviews"
+
+worker: ## Run the job worker (Ctrl-C stops it after the current job)
+	cd $(API_DIR) && uv run retailops-worker
 
 reviews: ## List the human review queue
 	cd $(API_DIR) && uv run retailops-review queue

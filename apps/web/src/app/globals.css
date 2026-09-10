@@ -778,3 +778,37 @@ table.data tbody tr[data-selected='true'] {
   gap: 0.75rem;
   margin-top: 1rem;
 }
+
+/* Starting work: the control, and the job it produced. */
+.upload-form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: flex-end;
+  margin-top: 12px;
+}
+
+.upload-form .field {
+  min-width: 12rem;
+}
+
+.job-status {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+  margin-top: 12px;
+}
+
+.job-status__reason {
+  color: var(--text-danger, #b3261e);
+  font-size: 13px;
+}
+
+.trigger-form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: flex-end;
+  margin-top: 12px;
+}

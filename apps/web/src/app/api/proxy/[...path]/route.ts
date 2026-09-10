@@ -31,13 +31,15 @@ async function forward(request: Request, path: string[]): Promise<NextResponse> 
     }
   }
 
+  // Read the body as bytes. Decoding it as text would corrupt an upload, and
+  // a multipart boundary must survive untouched.
   const hasBody = request.method !== 'GET' && request.method !== 'HEAD';
   let upstream: Response;
   try {
     upstream = await fetch(target, {
       method: request.method,
       headers,
-      body: hasBody ? await request.text() : undefined,
+      body: hasBody ? await request.arrayBuffer() : undefined,
       cache: 'no-store',
     });
   } catch {

@@ -302,3 +302,23 @@ export type ReconciliationPage = Page<ReconciliationRunSummary>;
 export type ExceptionPage = Page<ReconciliationException>;
 export type ReviewPage = Page<ReviewCase>;
 export type AuditPage = Page<AuditEvent>;
+
+export type JobKind = 'document_intake' | 'reconciliation' | 'forecast';
+
+export type JobState = 'queued' | 'running' | 'succeeded' | 'failed' | 'cancelled';
+
+export interface Job {
+  id: number;
+  kind: JobKind;
+  state: JobState;
+  requested_by: string;
+  requested_by_verified: boolean;
+  request: Record<string, unknown>;
+  result: Record<string, unknown> | null;
+  failure_reason: string | null;
+  attempts: number;
+  max_attempts: number;
+  created_at: string;
+  started_at: string | null;
+  finished_at: string | null;
+}

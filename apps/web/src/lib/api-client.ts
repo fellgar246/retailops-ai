@@ -18,6 +18,8 @@ export interface RequestOptions extends Omit<RequestInit, 'body' | 'signal'> {
   query?: Record<string, QueryValue>;
   timeoutMs?: number;
   signal?: AbortSignal;
+  /** Send the body as multipart rather than JSON. Uploads need this. */
+  isFormData?: boolean;
 }
 
 export interface Page<T> {
@@ -49,7 +51,7 @@ export function buildQuery(query: Record<string, QueryValue> | undefined): strin
 }
 
 export async function apiRequest<T>(path: string, options: RequestOptions = {}): Promise<T> {
-  const { body, query, timeoutMs = 8000, headers, signal, ...rest } = options;
+  const { body, query, timeoutMs = 8000, headers, signal, isFormData, ...rest } = options;
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), timeoutMs);
   const onAbort = () => controller.abort();
@@ -59,11 +61,12 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}):
     const response = await fetch(`${API_BASE_URL}${path}${buildQuery(query)}`, {
       ...rest,
       signal: controller.signal,
-      headers: {
-        'Content-Type': 'application/json',
-        ...headers,
-      },
-      ...(body === undefined ? {} : { body: JSON.stringify(body) }),
+      // The browser must set the multipart content type itself, because only
+      // it knows the boundary it generated.
+      headers: isFormData ? { ...headers } : { 'Content-Type': 'application/json', ...headers },
+      ...(body === undefined
+        ? {}
+        : { body: isFormData ? (body as BodyInit) : JSON.stringify(body) }),
     });
 
     if (!response.ok) {

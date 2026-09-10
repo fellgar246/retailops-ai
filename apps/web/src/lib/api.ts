@@ -1,4 +1,4 @@
-import { apiRequest } from './api-client';
+import { apiRequest, type Page } from './api-client';
 import type {
   AuditPage,
   DocumentDetail,
@@ -7,6 +7,9 @@ import type {
   FeedbackRow,
   ForecastPage,
   ForecastRunDetail,
+  Job,
+  JobKind,
+  JobState,
   Overview,
   ReconciliationPage,
   ReconciliationRunDetail,
@@ -139,4 +142,38 @@ export function getAudit(
 
 export function searchOperations(q: string, signal?: AbortSignal): Promise<SearchResults> {
   return apiRequest<SearchResults>('/search', { query: { q }, signal });
+}
+
+export function getJob(id: number, signal?: AbortSignal): Promise<Job> {
+  return apiRequest<Job>(`/jobs/${id}`, { signal });
+}
+
+export function getJobs(
+  query: { kind?: JobKind[]; state?: JobState[]; limit?: number; offset?: number } = {},
+  signal?: AbortSignal,
+): Promise<Page<Job>> {
+  return apiRequest<Page<Job>>('/jobs', { query, signal });
+}
+
+/** Upload a supplier sheet. The response is a job, not the finished work. */
+export function uploadSupplierDocument(supplier: string, file: File): Promise<Job> {
+  const body = new FormData();
+  body.append('supplier', supplier);
+  body.append('file', file);
+  return apiRequest<Job>('/documents', { method: 'POST', body, isFormData: true });
+}
+
+export function startReconciliation(body: {
+  supplier: string;
+  invoice?: string;
+  po?: string;
+}): Promise<Job> {
+  return apiRequest<Job>('/reconciliations', { method: 'POST', body });
+}
+
+export function startForecast(body: {
+  horizon?: number;
+  min_train_periods?: number;
+}): Promise<Job> {
+  return apiRequest<Job>('/forecasts', { method: 'POST', body });
 }
