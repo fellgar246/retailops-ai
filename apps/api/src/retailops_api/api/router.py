@@ -6,6 +6,7 @@ from retailops_api.api.routes import (
     documents,
     forecasts,
     health,
+    jobs,
     ops,
     reconciliations,
     reviews,
@@ -21,6 +22,7 @@ authenticated.include_router(documents.router)
 authenticated.include_router(reconciliations.router)
 authenticated.include_router(reviews.router)
 authenticated.include_router(audit.router)
+authenticated.include_router(jobs.router)
 
 api_router = APIRouter()
 api_router.include_router(health.router)

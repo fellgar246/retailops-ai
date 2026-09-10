@@ -16,7 +16,7 @@ from retailops_api.documents.catalog_rules import validate_against_catalog
 from retailops_api.documents.parse import SheetAnalyzer, detect_media_type, parse_supplier_sheet
 from retailops_api.documents.persist import create_received_document, replace_findings, set_status
 from retailops_api.documents.rules import validate_sheet
-from retailops_api.documents.storage import DocumentStorage
+from retailops_api.documents.storage import DocumentStorage, StoredObject
 from retailops_api.documents.types import (
     DocumentProcessError,
     Finding,
@@ -24,6 +24,7 @@ from retailops_api.documents.types import (
     ParseIssue,
     ProcessResult,
     RuleConfig,
+    StorageError,
 )
 from retailops_api.domain.models.document import (
     DocumentStatus,
@@ -59,9 +60,93 @@ def process_document(
 
     detected = _safe_media_type(filename, media_type)
     stored = storage.save(data, filename=filename, media_type=detected)
+    return _process_stored(
+        session,
+        supplier_code=supplier_code,
+        supplier_id=supplier.id,
+        stored=stored,
+        data=data,
+        document_type=document_type,
+        rule_config=rule_config,
+        analyzer=analyzer,
+        limits=limits,
+    )
+
+
+def process_stored_document(
+    session: Session,
+    storage: DocumentStorage,
+    *,
+    supplier_code: str,
+    storage_key: str,
+    filename: str,
+    media_type: str | None = None,
+    document_type: DocumentType = DocumentType.supplier_sheet,
+    rule_config: RuleConfig | None = None,
+    analyzer: SheetAnalyzer | None = None,
+    bounds: DocumentBounds | None = None,
+) -> ProcessResult:
+    """Run intake over bytes that were stored earlier.
+
+    Intake accepts an upload and answers before the work runs, so the bytes are
+    already in the store by the time this is called. Carrying them through a
+    queue instead would put a whole document in a message.
+    """
+
+    supplier = get_supplier_by_code(session, supplier_code)
+    if supplier is None:
+        raise DocumentProcessError(f"unknown supplier {supplier_code!r}")
+
+    limits = bounds or DocumentBounds()
+    try:
+        data = storage.read(storage_key)
+        meta = storage.metadata(storage_key)
+    except StorageError as error:
+        raise DocumentProcessError(f"stored document {storage_key!r} is unreadable") from error
+
+    if len(data) > limits.max_upload_bytes:
+        raise DocumentProcessError(
+            f"document exceeds max upload size ({limits.max_upload_bytes} bytes)"
+        )
+
+    stored = StoredObject(
+        key=meta.key,
+        checksum=meta.checksum,
+        size=meta.size,
+        media_type=meta.media_type or _safe_media_type(filename, media_type),
+        filename=meta.filename or filename,
+    )
+    return _process_stored(
+        session,
+        supplier_code=supplier_code,
+        supplier_id=supplier.id,
+        stored=stored,
+        data=data,
+        document_type=document_type,
+        rule_config=rule_config,
+        analyzer=analyzer,
+        limits=limits,
+    )
+
+
+def _process_stored(
+    session: Session,
+    *,
+    supplier_code: str,
+    supplier_id: int,
+    stored: StoredObject,
+    data: bytes,
+    document_type: DocumentType,
+    rule_config: RuleConfig | None,
+    analyzer: SheetAnalyzer | None,
+    limits: DocumentBounds,
+) -> ProcessResult:
+    """Parse, validate and record. Shared by both entry points."""
+
+    detected = stored.media_type
     document = create_received_document(
         session,
-        supplier_id=supplier.id,
+        supplier_id=supplier_id,
         stored=stored,
         document_type=document_type,
     )
@@ -92,7 +177,7 @@ def process_document(
     findings = [_issue_to_finding(issue) for issue in parsed.issues]
     findings.extend(validate_sheet(parsed.rows, config=config))
     findings.extend(
-        validate_against_catalog(parsed.rows, load_catalog_index(session), supplier_id=supplier.id)
+        validate_against_catalog(parsed.rows, load_catalog_index(session), supplier_id=supplier_id)
     )
     findings = _sorted_findings(findings)
 

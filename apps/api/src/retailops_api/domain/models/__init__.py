@@ -20,6 +20,7 @@ from retailops_api.domain.models.goods_receipt import (
     GoodsReceiptLine,
     GoodsReceiptStatus,
 )
+from retailops_api.domain.models.job import JobKind, JobState, ProcessingJob
 from retailops_api.domain.models.product import Product
 from retailops_api.domain.models.purchase_order import (
     PurchaseOrder,
@@ -67,6 +68,9 @@ __all__ = [
     "GoodsReceipt",
     "GoodsReceiptLine",
     "GoodsReceiptStatus",
+    "JobKind",
+    "JobState",
+    "ProcessingJob",
     "Product",
     "PurchaseOrder",
     "PurchaseOrderLine",

@@ -18,6 +18,7 @@ EXPECTED_TABLES = {
     "forecast_runs",
     "goods_receipt_lines",
     "goods_receipts",
+    "processing_jobs",
     "products",
     "purchase_order_lines",
     "purchase_orders",

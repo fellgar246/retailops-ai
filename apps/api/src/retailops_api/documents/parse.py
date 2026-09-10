@@ -49,6 +49,11 @@ MEDIA_TYPES_BY_SUFFIX = {
 }
 
 
+#: Every media type intake can turn into rows. Anything else is refused at the
+#: boundary rather than stored and failed later.
+SUPPORTED_MEDIA_TYPES = frozenset(MEDIA_TYPES_BY_SUFFIX.values())
+
+
 class SheetAnalyzer(Protocol):
     """Hosted document analysis. Implementations must not assume a vendor."""
 

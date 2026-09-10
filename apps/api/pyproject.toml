@@ -19,6 +19,7 @@ dependencies = [
     "pypdf>=5.0.0",
     "openai>=2.0.0,<3",
     "pyjwt[crypto]>=2.10.0,<3",
+    "python-multipart>=0.0.20",
 ]
 
 [project.optional-dependencies]
@@ -39,6 +40,7 @@ retailops-review-eval = "retailops_api.review.cli:main"
 retailops-review = "retailops_api.review.ops_cli:main"
 retailops-demo = "retailops_api.demo.cli:main"
 retailops-aws-smoke = "retailops_api.ops.live:main"
+retailops-worker = "retailops_api.jobs.cli:main"
 
 [dependency-groups]
 dev = [
