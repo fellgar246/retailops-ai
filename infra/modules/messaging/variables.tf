@@ -18,3 +18,15 @@ variable "tags" {
   description = "Tags applied to messaging resources."
   default     = {}
 }
+
+variable "enable_review_callbacks" {
+  type        = bool
+  description = "Create the review callback queues. Only useful once a hosted orchestrator waits on them."
+  default     = true
+}
+
+variable "enable_event_routing" {
+  type        = bool
+  description = "Create the event bus and rule that forward document events. Only useful once something publishes them."
+  default     = true
+}

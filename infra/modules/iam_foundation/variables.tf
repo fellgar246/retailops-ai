@@ -63,3 +63,9 @@ variable "tags" {
   description = "Tags applied to IAM roles."
   default     = {}
 }
+
+variable "jobs_queue_arns" {
+  type        = list(string)
+  description = "Queues the document processor may consume. Empty grants nothing."
+  default     = []
+}

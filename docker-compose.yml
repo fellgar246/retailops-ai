@@ -54,11 +54,43 @@ services:
       AWS_USE_S3_STORAGE: ${AWS_USE_S3_STORAGE:-false}
       AWS_DOCUMENTS_BUCKET: ${AWS_DOCUMENTS_BUCKET:-}
       AWS_DOCUMENTS_PREFIX: ${AWS_DOCUMENTS_PREFIX:-supplier-documents}
+      JOB_QUEUE_PROVIDER: ${JOB_QUEUE_PROVIDER:-database}
+      JOBS_QUEUE_URL: ${JOBS_QUEUE_URL:-}
     volumes:
       - document_data:/app/data/documents
       - paddleocr_cache:/home/appuser/.paddlex
     ports:
       - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  worker:
+    profiles: ["full"]
+    platform: ${API_PLATFORM:-linux/amd64}
+    build:
+      context: ./apps/api
+      args:
+        ENABLE_PADDLEOCR: ${ENABLE_PADDLEOCR:-false}
+        ENABLE_AWS: ${ENABLE_AWS:-false}
+    container_name: retailops-worker
+    restart: unless-stopped
+    command: ["retailops-worker"]
+    environment:
+      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-retailops}:${POSTGRES_PASSWORD:-retailops}@postgres:5432/${POSTGRES_DB:-retailops}
+      DOCUMENT_STORAGE_ROOT: /app/data/documents
+      AI_REVIEW_PROVIDER: ${AI_REVIEW_PROVIDER:-mock}
+      DOCUMENT_OCR_PROVIDER: ${DOCUMENT_OCR_PROVIDER:-local}
+      JOB_QUEUE_PROVIDER: ${JOB_QUEUE_PROVIDER:-database}
+      JOBS_QUEUE_URL: ${JOBS_QUEUE_URL:-}
+      AWS_ENABLED: ${AWS_ENABLED:-false}
+      AWS_REGION: ${AWS_REGION:-us-east-1}
+      AWS_USE_S3_STORAGE: ${AWS_USE_S3_STORAGE:-false}
+      AWS_DOCUMENTS_BUCKET: ${AWS_DOCUMENTS_BUCKET:-}
+    volumes:
+      # The API stores the bytes and this reads them back, so they share a
+      # volume here. Deployed, they do not share a filesystem and use S3.
+      - document_data:/app/data/documents
     depends_on:
       postgres:
         condition: service_healthy

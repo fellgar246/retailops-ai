@@ -29,7 +29,19 @@ from retailops_api.jobs.types import (
 
 
 def enqueue(session: Session, request: JobRequest, *, now: datetime | None = None) -> ProcessingJob:
-    """Record a job, or return the one this key already produced.
+    """Record a job, or return the one this key already produced."""
+
+    job, _ = enqueue_job(session, request, now=now)
+    return job
+
+
+def enqueue_job(
+    session: Session, request: JobRequest, *, now: datetime | None = None
+) -> tuple[ProcessingJob, bool]:
+    """Record a job and say whether this call is what created it.
+
+    A hosted queue needs the distinction: announcing an existing job would put
+    a second message in flight for work already queued.
 
     The uniqueness of (kind, key) is enforced by the database rather than by a
     prior read, so two simultaneous submissions cannot both create a job.
@@ -46,7 +58,7 @@ def enqueue(session: Session, request: JobRequest, *, now: datetime | None = Non
     moment = now or datetime.now(UTC)
     existing = find_by_key(session, request.kind, key)
     if existing is not None:
-        return existing
+        return existing, False
 
     job = ProcessingJob(
         kind=request.kind.value,
@@ -70,8 +82,8 @@ def enqueue(session: Session, request: JobRequest, *, now: datetime | None = Non
         winner = find_by_key(session, request.kind, key)
         if winner is None:  # pragma: no cover - the constraint was something else
             raise
-        return winner
-    return job
+        return winner, False
+    return job, True
 
 
 def find_by_key(session: Session, kind: JobKind, key: str) -> ProcessingJob | None:

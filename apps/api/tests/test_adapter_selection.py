@@ -73,3 +73,26 @@ def test_pdf_uses_the_injected_analyzer() -> None:
     assert client.calls
     assert client.calls[0]["FeatureTypes"] == ["TABLES", "FORMS"]
     assert parsed.rows[0].supplier_sku == "NW-SODA-330"
+
+
+def test_local_storage_is_refused_when_instances_cannot_share_one() -> None:
+    """The API stores the bytes and a worker reads them back, so separate
+    instances must not be pointed at separate filesystems."""
+
+    import pytest
+
+    from retailops_api.core.adapters import ConfigurationError, document_storage_for
+    from retailops_api.core.config import Settings
+
+    with pytest.raises(ConfigurationError, match="object storage is required"):
+        document_storage_for(Settings(instance_count=2))
+
+
+def test_a_single_instance_may_use_local_storage(tmp_path: Path) -> None:
+    from retailops_api.core.adapters import document_storage_for
+    from retailops_api.core.config import Settings
+    from retailops_api.documents.storage import LocalDocumentStorage
+
+    storage = document_storage_for(Settings(instance_count=1), root=tmp_path)
+
+    assert isinstance(storage, LocalDocumentStorage)

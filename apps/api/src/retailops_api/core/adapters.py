@@ -9,11 +9,14 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
-from retailops_api.core.aws import AwsConfig
+from sqlalchemy.orm import Session
+
+from retailops_api.core.aws import AwsConfig, AwsConfigError
 from retailops_api.core.clients import (
     bedrock_runtime_client,
     s3_client,
     sagemaker_client,
+    sqs_client,
     textract_client,
 )
 from retailops_api.core.config import Settings
@@ -30,11 +33,19 @@ from retailops_api.identity.cognito import CognitoIdentityVerifier, https_key_so
 from retailops_api.identity.contract import IdentityVerifier
 from retailops_api.identity.local import LocalIdentityVerifier
 from retailops_api.identity.types import IdentityConfigError
+from retailops_api.jobs.contract import JobQueue
+from retailops_api.jobs.database import DatabaseJobQueue
+from retailops_api.jobs.sqs import SqsJobQueue
+from retailops_api.jobs.types import JobConfigError
 from retailops_api.review.bedrock import BedrockAIReviewer
 from retailops_api.review.contract import AIReviewer
 from retailops_api.review.mock import MockAIReviewer
 from retailops_api.review.openai import OpenAIReviewer
 from retailops_api.review.types import ReviewerError
+
+
+class ConfigurationError(AwsConfigError):
+    """The application is configured in a way that cannot work."""
 
 
 def document_storage_for(
@@ -45,6 +56,14 @@ def document_storage_for(
 ) -> DocumentStorage:
     aws = settings.aws_config()
     if not aws.s3_enabled():
+        if settings.instance_count > 1:
+            # The API stores the bytes and a worker reads them back. Separate
+            # instances do not share a filesystem, so the document would be
+            # unreadable exactly when it mattered.
+            raise ConfigurationError(
+                "object storage is required when more than one instance runs; "
+                "set AWS_USE_S3_STORAGE=true or reduce INSTANCE_COUNT to 1"
+            )
         return LocalDocumentStorage(root or _document_root(settings))
     aws.require_s3()
     client = s3 if s3 is not None else s3_client(aws.region)
@@ -159,6 +178,31 @@ def identity_verifier_for(
         )
         return CognitoIdentityVerifier(issuer=issuer, audience=audience, key_source=source)
     raise IdentityConfigError(f"unknown identity provider {provider!r}")
+
+
+def job_queue_for(
+    settings: Settings,
+    session: Session,
+    *,
+    sqs: Any | None = None,
+) -> JobQueue:
+    """Build the configured queue.
+
+    Each provider validates its own configuration and returns; none falls
+    through to another, so a deployment that names a hosted queue without one
+    fails loudly instead of quietly running work in the database.
+    """
+
+    provider = settings.job_queue_provider
+    if provider == "database":
+        return DatabaseJobQueue(session)
+    if provider == "sqs":
+        queue_url = settings.jobs_queue_url.strip()
+        if not queue_url:
+            raise JobConfigError("JOBS_QUEUE_URL is required when JOB_QUEUE_PROVIDER=sqs")
+        client = sqs if sqs is not None else sqs_client(settings.aws_region)
+        return SqsJobQueue(session, client, queue_url=queue_url)
+    raise JobConfigError(f"unknown job queue provider {provider!r}")
 
 
 def model_registry_for(

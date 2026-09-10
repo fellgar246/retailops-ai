@@ -118,3 +118,13 @@ output "identity_hosted_domain" {
   description = "Hosted sign-in domain prefix."
   value       = module.identity.hosted_domain
 }
+
+output "jobs_queue_url" {
+  description = "Queue the API announces work on and the worker consumes."
+  value       = module.messaging.documents_queue_url
+}
+
+output "jobs_queue_arn" {
+  description = "ARN of the job queue."
+  value       = module.messaging.documents_queue_arn
+}

@@ -139,3 +139,39 @@ variable "cognito_domain" {
   description = "Hosted sign-in domain used by the web application."
   default     = ""
 }
+
+variable "worker_cpu" {
+  type        = number
+  description = "CPU units for the worker task."
+  default     = 512
+}
+
+variable "worker_memory" {
+  type        = number
+  description = "Memory for the worker task."
+  default     = 1024
+}
+
+variable "worker_count" {
+  type        = number
+  description = "How many workers run. Concurrency comes from more of them."
+  default     = 1
+}
+
+variable "document_processor_role_arn" {
+  type        = string
+  description = "Task role the worker assumes."
+  default     = ""
+}
+
+variable "documents_bucket" {
+  type        = string
+  description = "Object store holding supplier documents."
+  default     = ""
+}
+
+variable "jobs_queue_url" {
+  type        = string
+  description = "Queue the API announces work on and the worker consumes."
+  default     = ""
+}

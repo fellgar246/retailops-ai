@@ -61,12 +61,26 @@ module "identity" {
   tags                = merge(local.common_tags, { Component = "identity" })
 }
 
+module "messaging" {
+  source      = "../messaging"
+  name_prefix = local.name_prefix
+  # Only the queue the worker consumes. A bus, a rule and a callback queue that
+  # nothing publishes to or reads from would be live infrastructure doing
+  # nothing, and would still have to be understood by whoever comes next.
+  enable_review_callbacks = false
+  enable_event_routing    = false
+  account_id              = var.account_id
+  aws_region              = var.aws_region
+  tags                    = merge(local.common_tags, { Component = "messaging" })
+}
+
 module "iam" {
   source                       = "../iam_foundation"
   name_prefix                  = local.name_prefix
   aws_region                   = var.aws_region
   account_id                   = var.account_id
   documents_bucket_arn         = module.documents.bucket_arn
+  jobs_queue_arns              = [module.messaging.documents_queue_arn]
   ecr_repository_arns          = values(module.ecr.repository_arns)
   secret_arns                  = values(module.secrets.secret_arns)
   bedrock_model_id             = var.bedrock_model_id

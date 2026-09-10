@@ -75,6 +75,14 @@ class Settings(BaseSettings):
     cognito_client_id: str = ""
     cognito_region: str = ""
 
+    # Asynchronous work. The database queue needs no broker and no cloud.
+    # Selection is explicit and never inferred from the AWS feature flags.
+    job_queue_provider: Literal["database", "sqs"] = "database"
+    jobs_queue_url: str = ""
+    #: How many application instances run. More than one cannot share a local
+    #: filesystem, so document storage must be an object store.
+    instance_count: int = Field(default=1, ge=1)
+
     # AWS stays disabled unless explicitly enabled. Feature flags cannot turn
     # adapters on by themselves.
     aws_enabled: bool = False

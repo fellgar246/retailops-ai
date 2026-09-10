@@ -96,6 +96,11 @@ resource "aws_ecs_task_definition" "api" {
         { name = "DATABASE_URL", value = var.database_url },
         { name = "CORS_ORIGINS", value = var.cors_origins },
         { name = "AWS_ENABLED", value = "true" },
+        { name = "AWS_USE_S3_STORAGE", value = "true" },
+        { name = "AWS_DOCUMENTS_BUCKET", value = var.documents_bucket },
+        { name = "INSTANCE_COUNT", value = tostring(var.desired_count) },
+        { name = "JOB_QUEUE_PROVIDER", value = "sqs" },
+        { name = "JOBS_QUEUE_URL", value = var.jobs_queue_url },
         { name = "AUTH_PROVIDER", value = var.auth_provider },
         { name = "COGNITO_USER_POOL_ID", value = var.cognito_user_pool_id },
         { name = "COGNITO_CLIENT_ID", value = var.cognito_client_id }
@@ -147,6 +152,65 @@ resource "aws_ecs_task_definition" "web" {
       }
     }
   ])
+}
+
+resource "aws_ecs_task_definition" "worker" {
+  family                   = "${var.name_prefix}-worker"
+  network_mode             = "awsvpc"
+  requires_compatibilities = ["FARGATE"]
+  cpu                      = var.worker_cpu
+  memory                   = var.worker_memory
+  execution_role_arn       = var.execution_role_arn
+  task_role_arn            = var.document_processor_role_arn
+  tags                     = merge(var.tags, { Name = "${var.name_prefix}-worker" })
+
+  container_definitions = jsonencode([
+    {
+      name      = "worker"
+      image     = var.api_image
+      essential = true
+      command   = ["retailops-worker"]
+      environment = [
+        { name = "DATABASE_URL", value = var.database_url },
+        { name = "AWS_ENABLED", value = "true" },
+        # A worker and the API do not share a filesystem, so the document must
+        # live in the object store or it is unreadable exactly when it matters.
+        { name = "AWS_USE_S3_STORAGE", value = "true" },
+        { name = "AWS_USE_TEXTRACT", value = "true" },
+        { name = "AWS_USE_BEDROCK", value = "true" },
+        { name = "AWS_DOCUMENTS_BUCKET", value = var.documents_bucket },
+        { name = "INSTANCE_COUNT", value = tostring(var.desired_count) },
+        { name = "JOB_QUEUE_PROVIDER", value = "sqs" },
+        { name = "JOBS_QUEUE_URL", value = var.jobs_queue_url },
+        { name = "AUTH_PROVIDER", value = var.auth_provider },
+        { name = "COGNITO_USER_POOL_ID", value = var.cognito_user_pool_id },
+        { name = "COGNITO_CLIENT_ID", value = var.cognito_client_id }
+      ]
+      logConfiguration = {
+        logDriver = "awslogs"
+        options = {
+          awslogs-group         = var.api_log_group_name
+          awslogs-region        = var.aws_region
+          awslogs-stream-prefix = "worker"
+        }
+      }
+    }
+  ])
+}
+
+resource "aws_ecs_service" "worker" {
+  name            = "${var.name_prefix}-worker"
+  cluster         = aws_ecs_cluster.this.id
+  task_definition = aws_ecs_task_definition.worker.arn
+  desired_count   = var.worker_count
+  launch_type     = "FARGATE"
+  tags            = merge(var.tags, { Name = "${var.name_prefix}-worker" })
+
+  network_configuration {
+    subnets          = var.private_subnet_ids
+    security_groups  = [var.ecs_security_group_id]
+    assign_public_ip = false
+  }
 }
 
 resource "aws_ecs_service" "api" {

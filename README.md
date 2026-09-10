@@ -11,6 +11,7 @@ Retail operations intelligence platform. This repository currently contains:
 - **AI review contracts** — a provider-neutral reviewer, structured and validated outputs, a fixture mock, conservative routing to human review, and a versioned evaluation harness.
 - **Human review** — persisted cases on document findings and reconciliation exceptions, an immutable AI snapshot, controlled decisions, an append-only audit log, a feedback export and a metrics API.
 - **Authentication** — sign-in against a local development provider or a hosted user pool, two roles, and a verified subject on every review decision and audit event.
+- **Operator intake** — upload a supplier sheet, reconcile an invoice or evaluate demand from the console; the work runs behind a queue and the page follows the job until it settles.
 - **Operations web app** — a desktop-first shell for the overview, forecast runs, supplier documents, reconciliation exceptions, the human review queue, AI evaluation and the audit trail.
 
 Cloud adapters (S3 storage, Textract sheet translation, Bedrock review,
@@ -57,6 +58,9 @@ Configuration lives in environment variables. `make setup` copies
 | `POSTGRES_*`               | Database credentials and host port           |
 | `DATABASE_URL`             | SQLAlchemy/Alembic connection string         |
 | `CORS_ORIGINS`             | Comma-separated origins allowed by the API   |
+| `JOB_QUEUE_PROVIDER`       | `database` for local work, `sqs` for a hosted queue |
+| `JOBS_QUEUE_URL`           | Queue the API announces work on when `sqs` is selected |
+| `INSTANCE_COUNT`           | How many instances run; above 1 requires object storage |
 | `AUTH_PROVIDER`            | `local` development tokens or `cognito` hosted sign-in |
 | `AUTH_LOCAL_SECRET`        | Signing key shared by API and web for development tokens |
 | `COGNITO_USER_POOL_ID`     | User pool backing hosted sign-in            |
@@ -111,6 +115,7 @@ Recommended: PostgreSQL in Docker, API and web from the IDE.
 make ready      # .env, PostgreSQL, migrations
 make demo       # catalog, sales, forecast, sheets, matches, review cases
 make dev        # API (:8000) and web (:3000)
+make worker     # process queued uploads, reconciliations and forecasts
 ```
 
 `make demo` is safe to re-run and does not require editing the database by

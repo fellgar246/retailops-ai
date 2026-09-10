@@ -40,6 +40,16 @@ def s3_client(region: str, *, timeout_seconds: float = 10.0) -> Any:
     )
 
 
+def sqs_client(region: str, *, timeout_seconds: float = 25.0) -> Any:
+    """Long polling waits up to twenty seconds, so the read timeout allows it."""
+
+    return require_boto3().client(
+        "sqs",
+        region_name=region,
+        config=_client_config(timeout_seconds=timeout_seconds),
+    )
+
+
 def textract_client(region: str, *, timeout_seconds: float = 30.0) -> Any:
     return require_boto3().client(
         "textract",

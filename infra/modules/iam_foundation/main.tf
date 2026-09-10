@@ -125,6 +125,24 @@ data "aws_iam_policy_document" "document_processor" {
     actions   = ["textract:AnalyzeDocument", "textract:DetectDocumentText"]
     resources = ["*"]
   }
+
+  # Only present once a queue exists. Sending is included because a job that
+  # will be retried is announced again rather than waiting out a timeout.
+  dynamic "statement" {
+    for_each = var.jobs_queue_arns
+    content {
+      sid = "ConsumeJobs${index(var.jobs_queue_arns, statement.value)}"
+      actions = [
+        "sqs:ReceiveMessage",
+        "sqs:DeleteMessage",
+        "sqs:SendMessage",
+        "sqs:ChangeMessageVisibility",
+        "sqs:GetQueueAttributes",
+        "sqs:GetQueueUrl",
+      ]
+      resources = [statement.value]
+    }
+  }
 }
 
 data "aws_iam_policy_document" "ml" {

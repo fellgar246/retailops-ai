@@ -88,25 +88,28 @@ module "database" {
 }
 
 module "runtime" {
-  source                = "../ecs"
-  name_prefix           = local.name_prefix
-  cluster_name          = local.cluster_name
-  vpc_id                = module.networking.vpc_id
-  public_subnet_ids     = module.networking.public_subnet_ids
-  private_subnet_ids    = module.networking.private_subnet_ids
-  alb_security_group_id = module.networking.alb_security_group_id
-  ecs_security_group_id = module.networking.ecs_security_group_id
-  execution_role_arn    = module.iam.ecs_execution_role_arn
-  api_task_role_arn     = module.iam.api_task_role_arn
-  api_image             = var.api_image
-  web_image             = var.web_image
-  api_log_group_name    = module.logs.api_log_group_name
-  web_log_group_name    = module.logs.web_log_group_name
-  aws_region            = var.aws_region
-  desired_count         = var.desired_count
-  database_url          = "postgresql+psycopg://${var.db_username}:${var.master_password}@${module.database.address}:5432/${var.db_name}"
-  cors_origins          = var.cors_origins
-  tags                  = local.common_tags
+  source                      = "../ecs"
+  name_prefix                 = local.name_prefix
+  cluster_name                = local.cluster_name
+  vpc_id                      = module.networking.vpc_id
+  public_subnet_ids           = module.networking.public_subnet_ids
+  private_subnet_ids          = module.networking.private_subnet_ids
+  alb_security_group_id       = module.networking.alb_security_group_id
+  ecs_security_group_id       = module.networking.ecs_security_group_id
+  execution_role_arn          = module.iam.ecs_execution_role_arn
+  api_task_role_arn           = module.iam.api_task_role_arn
+  api_image                   = var.api_image
+  web_image                   = var.web_image
+  api_log_group_name          = module.logs.api_log_group_name
+  web_log_group_name          = module.logs.web_log_group_name
+  aws_region                  = var.aws_region
+  desired_count               = var.desired_count
+  document_processor_role_arn = module.iam.document_processor_role_arn
+  documents_bucket            = var.documents_bucket_name
+  jobs_queue_url              = module.messaging.documents_queue_url
+  database_url                = "postgresql+psycopg://${var.db_username}:${var.master_password}@${module.database.address}:5432/${var.db_name}"
+  cors_origins                = var.cors_origins
+  tags                        = local.common_tags
 }
 
 module "review_workflow" {
