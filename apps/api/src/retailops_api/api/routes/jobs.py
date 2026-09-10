@@ -21,7 +21,7 @@ from retailops_api.api.deps import (
     get_db,
 )
 from retailops_api.api.paging import DEFAULT_LIMIT, validate_page
-from retailops_api.core.adapters import document_storage_for
+from retailops_api.core.adapters import document_storage_for, job_queue_for
 from retailops_api.core.config import Settings
 from retailops_api.documents.parse import SUPPORTED_MEDIA_TYPES, detect_media_type
 from retailops_api.documents.types import ParseError, StorageError
@@ -31,6 +31,7 @@ from retailops_api.identity.types import Principal
 from retailops_api.jobs import store
 from retailops_api.jobs.query import list_jobs
 from retailops_api.jobs.types import (
+    JobConfigError,
     JobNotFoundError,
     JobRequest,
     JobValidationError,
@@ -91,6 +92,7 @@ async def upload_document(
     key = idempotency_key or _checksum_key(supplier, stored.checksum)
     return _enqueue(
         session,
+        settings,
         actor,
         JobRequest(
             kind=JobKind.document_intake,
@@ -109,7 +111,10 @@ async def upload_document(
 
 @router.post("/reconciliations", status_code=202)
 def start_reconciliation(
-    body: ReconciliationRequest, session: DbSession, actor: ReviewerPrincipal
+    body: ReconciliationRequest,
+    session: DbSession,
+    settings: AppSettings,
+    actor: ReviewerPrincipal,
 ) -> dict[str, Any]:
     _require_supplier(session, body.supplier)
     invoice = (body.invoice or "").strip() or None
@@ -122,6 +127,7 @@ def start_reconciliation(
     key = body.idempotency_key or f"{body.supplier}:{po or ''}:{invoice or ''}"
     return _enqueue(
         session,
+        settings,
         actor,
         JobRequest(
             kind=JobKind.reconciliation,
@@ -139,11 +145,15 @@ def start_reconciliation(
 
 @router.post("/forecasts", status_code=202)
 def start_forecast(
-    body: ForecastRequest, session: DbSession, actor: ReviewerPrincipal
+    body: ForecastRequest,
+    session: DbSession,
+    settings: AppSettings,
+    actor: ReviewerPrincipal,
 ) -> dict[str, Any]:
     key = body.idempotency_key or f"h{body.horizon}:m{body.min_train_periods}"
     return _enqueue(
         session,
+        settings,
         actor,
         JobRequest(
             kind=JobKind.forecast,
@@ -187,12 +197,16 @@ def job_detail(job_id: int, session: DbSession, principal: CurrentPrincipal) -> 
         raise HTTPException(status_code=404, detail=str(error)) from error
 
 
-def _enqueue(session: Session, actor: Principal, request: JobRequest) -> dict[str, Any]:
+def _enqueue(
+    session: Session, settings: Settings, actor: Principal, request: JobRequest
+) -> dict[str, Any]:
+    del actor
     try:
-        job = store.enqueue(session, request)
+        job = job_queue_for(settings, session).enqueue(request)
     except JobValidationError as error:
         raise HTTPException(status_code=400, detail=str(error)) from error
-    del actor
+    except JobConfigError as error:
+        raise HTTPException(status_code=500, detail="the job queue is not configured") from error
     return store.job_view(job).to_dict()
 
 

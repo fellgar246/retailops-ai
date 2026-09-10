@@ -222,3 +222,62 @@ def test_aws_feature_flags_do_not_select_a_queue(session: Session) -> None:
     settings = Settings(aws_enabled=True, aws_use_s3_storage=True)
 
     assert isinstance(job_queue_for(settings, session), DatabaseJobQueue)
+
+
+def test_the_job_the_message_names_is_the_one_that_runs(
+    queue: SqsJobQueue, session: Session
+) -> None:
+    """With several jobs waiting, taking whichever is next would run the wrong
+    one and leave the delivered job untouched."""
+
+    older = store.enqueue(session, _request("older"))
+    delivered = queue.enqueue(_request("delivered"))
+
+    lease = queue.lease()
+
+    assert lease is not None
+    assert lease.job_id == delivered.id
+    session.refresh(older)
+    assert older.state == JobState.queued.value
+
+
+def test_a_message_for_a_job_someone_else_took_is_left_alone(
+    queue: SqsJobQueue, client: FakeSqs, session: Session
+) -> None:
+    job = queue.enqueue(_request())
+    store.claim_job(session, job.id)
+
+    assert queue.lease() is None
+    # Not deleted: nobody has finished the work yet.
+    assert client.deleted == []
+
+
+def test_a_redelivered_job_whose_holder_went_away_can_run_again(
+    queue: SqsJobQueue, client: FakeSqs, session: Session
+) -> None:
+    """SQS redelivers, but the row must also stop refusing the claim.
+
+    Otherwise a worker that crashed leaves the job unrunnable for good, even
+    though its message keeps coming back.
+    """
+
+    from datetime import UTC, datetime, timedelta
+
+    job = queue.enqueue(_request())
+    lease = queue.lease()
+    assert lease is not None
+
+    # The holder disappears; the lease lapses and the message reappears.
+    session.refresh(job)
+    job.leased_until = datetime.now(UTC) - timedelta(minutes=10)
+    session.flush()
+    client.send_message(
+        QueueUrl=QUEUE_URL, MessageBody=json.dumps({"job_id": job.id, "kind": job.kind})
+    )
+
+    retried = queue.lease()
+
+    assert retried is not None
+    assert retried.job_id == job.id
+    session.refresh(job)
+    assert job.attempts == 2

@@ -63,6 +63,10 @@ class SqsJobQueue:
         return job
 
     def lease(self, *, kinds: tuple[JobKind, ...] = ()) -> Lease | None:
+        # A worker that went away leaves a row in `running`. The queue will
+        # redeliver its message, but the row would refuse every claim until
+        # something released it, so the job would be stuck for good.
+        store.release_expired(self._session)
         response = self._client.receive_message(
             QueueUrl=self._queue_url,
             MaxNumberOfMessages=1,
@@ -87,8 +91,12 @@ class SqsJobQueue:
             if kinds and JobKind(job.kind) not in kinds:
                 # Another worker handles this kind; let the message reappear.
                 continue
-            claimed = store.claim(self._session, kinds=kinds, lease_seconds=self._lease_seconds)
-            if claimed is None or claimed.job_id != job_id:
+            # Claim the job this message names. Taking whichever is next would
+            # run a different one and leave the delivered job untouched.
+            claimed = store.claim_job(self._session, job_id, lease_seconds=self._lease_seconds)
+            if claimed is None:
+                # Someone else holds it, or it is not due yet. Leave the message
+                # to reappear rather than deleting work nobody has done.
                 continue
             self._receipts[claimed.job_id] = receipt
             return claimed

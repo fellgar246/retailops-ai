@@ -152,6 +152,49 @@ def claim(
             return Lease(job_id=candidate, token=token, expires_at=expires)
 
 
+def claim_job(
+    session: Session,
+    job_id: int,
+    *,
+    lease_seconds: int = DEFAULT_LEASE_SECONDS,
+    now: datetime | None = None,
+) -> Lease | None:
+    """Claim one named job, or return nothing.
+
+    A hosted queue delivers a specific job, so taking whichever is next would
+    hand the worker the wrong one and leave the delivered one untouched.
+    """
+
+    moment = now or datetime.now(UTC)
+    expires = moment + timedelta(seconds=lease_seconds)
+    token = secrets.token_hex(16)
+    statement = (
+        update(ProcessingJob)
+        .where(
+            ProcessingJob.id == job_id,
+            ProcessingJob.state == JobState.queued.value,
+            ProcessingJob.available_at <= moment,
+        )
+        .values(
+            state=JobState.running.value,
+            lease_token=token,
+            leased_until=expires,
+            attempts=ProcessingJob.attempts + 1,
+        )
+        .execution_options(synchronize_session=False)
+    )
+    outcome = cast("CursorResult[Any]", session.execute(statement))
+    if not outcome.rowcount:
+        return None
+    job = session.get(ProcessingJob, job_id, populate_existing=True)
+    if job is None:  # pragma: no cover - it was claimed a moment ago
+        raise JobNotFoundError(f"job {job_id} not found")
+    if job.started_at is None:
+        job.started_at = moment
+    session.flush()
+    return Lease(job_id=job_id, token=token, expires_at=expires)
+
+
 def _next_claimable(session: Session, *, kinds: tuple[JobKind, ...], now: datetime) -> int | None:
     statement = select(ProcessingJob.id).where(
         ProcessingJob.state == JobState.queued.value,

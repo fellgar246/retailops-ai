@@ -19,6 +19,7 @@ from types import FrameType
 
 from sqlalchemy.orm import Session
 
+from retailops_api.core.adapters import job_queue_for
 from retailops_api.core.config import Settings, get_settings
 from retailops_api.db.session import get_session_factory
 from retailops_api.domain.models.job import JobKind
@@ -74,16 +75,27 @@ class Worker:
         """Claim and run a single job. Returns whether one was found."""
 
         with self._session_factory() as session:
-            store.release_expired(session)
-            lease = store.claim(session, kinds=self._kinds)
+            lease = job_queue_for(self._settings, session).lease(kinds=self._kinds)
             session.commit()
             if lease is None:
                 return False
 
-        self._execute(lease)
+        succeeded = self._execute(lease)
+
+        # Settle the delivery after the outcome is on the row, so a hosted
+        # queue never deletes a message for work that was not recorded.
+        with self._session_factory() as session:
+            try:
+                job_queue_for(self._settings, session).release(lease, succeeded=succeeded)
+                session.commit()
+            except Exception:  # pragma: no cover - the row already holds the truth
+                session.rollback()
+                logger.exception("could not settle the delivery of job %s", lease.job_id)
         return True
 
-    def _execute(self, lease: Lease) -> None:
+    def _execute(self, lease: Lease) -> bool:
+        """Run the job. Returns whether it succeeded."""
+
         with self._session_factory() as session:
             try:
                 job = store.get_job(session, lease.job_id)
@@ -93,16 +105,17 @@ class Worker:
             except PermanentJobError as error:
                 session.rollback()
                 self._record_failure(lease, str(error), retry=False)
-                return
+                return False
             except Exception as error:
                 session.rollback()
                 self._record_failure(lease, f"{type(error).__name__}: {error}", retry=True)
-                return
+                return False
 
             try:
                 store.succeed(session, lease, result=result)
                 session.commit()
                 logger.info("job %s succeeded", lease.job_id)
+                return True
             except Exception:
                 session.rollback()
                 raise
