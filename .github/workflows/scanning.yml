@@ -88,11 +88,29 @@ jobs:
           # shellcheck disable=SC2086
           docker build $args -t "scan-target:${{ matrix.name }}" "${{ matrix.context }}"
 
-      - name: Scan the image
+      # What we chose to depend on blocks. We can change a dependency today.
+      - name: Scan what the application depends on
         uses: aquasecurity/trivy-action@v0.36.0
         with:
           image-ref: scan-target:${{ matrix.name }}
+          scanners: vuln
+          vuln-type: library
           format: table
           exit-code: '1'
+          ignore-unfixed: true
+          severity: HIGH,CRITICAL
+
+      # The base image reports. A fix arrives when its publisher rebuilds the
+      # tag, which is a maintenance action and not something a commit here can
+      # do; failing on it would mean a red pipeline nobody can turn green, and
+      # a check nobody can act on is a check that gets muted.
+      - name: Report what the base image carries
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          image-ref: scan-target:${{ matrix.name }}
+          scanners: vuln
+          vuln-type: os
+          format: table
+          exit-code: '0'
           ignore-unfixed: true
           severity: HIGH,CRITICAL

@@ -93,12 +93,26 @@ Even so, staging is applied for a validation window and destroyed, not
 left running. At roughly three cents an hour, proving a deployment costs
 less than a coffee; leaving it up costs more and proves nothing further.
 
-### Scanning has a written policy
+### Scanning blocks on what we can change, and reports the rest
 
 Lockfiles and images are scanned on every pull request and weekly.
-Findings at high severity or worse fail the run and name the package and
-version; lower severities are reported and do not block. A scanner that
-fails on everything is muted within a week.
+Findings at high severity or worse name the package and the fixed version.
+
+What blocks depends on who can act on it:
+
+- **What the application depends on blocks.** A dependency can be changed
+  by a commit, so a finding there is work, and the run fails until it is
+  done.
+- **What the base image carries reports.** A fix arrives when its
+  publisher rebuilds the tag. Nothing a commit here can do makes that
+  happen sooner, and a red pipeline nobody can turn green is a check that
+  gets muted within a week — at which point it protects nothing.
+
+The reduction that actually helped was not a policy change but removing
+what did not need to be there: the web runtime shipped a package manager
+into production, and every finding in that image came from it. A
+distroless runtime carries no package manager and no shell, and the
+standalone server needs neither.
 
 ## Consequences
 
