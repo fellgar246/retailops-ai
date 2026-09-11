@@ -156,6 +156,20 @@ for the overview, then use the sidebar to
 reach forecasts, documents, reconciliations, reviews, AI evaluation, audit
 and settings.
 
+## Continuous integration
+
+Every push and pull request runs the same gate as `make check-app` and
+`make check-infra`, with PostgreSQL available so the integration tests run
+rather than skip. Dependencies and images are scanned on every pull request
+and weekly.
+
+Workflows hold no credentials. Deployment authenticates through OpenID
+Connect and runs only from `main` in this repository; the role's trust
+policy matches the exact token subject, so a pull request — including one
+from a fork — cannot reach it.
+
+Deployment stays disabled until the deploy role is configured.
+
 ## Tests
 
 ```bash
