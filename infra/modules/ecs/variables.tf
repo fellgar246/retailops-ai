@@ -181,3 +181,33 @@ variable "assign_task_public_ip" {
   description = "Place tasks in public subnets with a public address. Required when there is no NAT gateway, because Fargate cannot otherwise reach the registry."
   default     = false
 }
+
+variable "enable_load_balancer" {
+  type        = bool
+  description = "Put the services behind a load balancer. False runs one task holding both containers, reachable directly, which removes the largest fixed cost."
+  default     = true
+}
+
+variable "use_fargate_spot" {
+  type        = bool
+  description = "Run on spare capacity, far cheaper but interruptible. The worker tolerates it: an interrupted job's lease expires and it is retried."
+  default     = false
+}
+
+variable "application_cpu" {
+  type        = number
+  description = "CPU for the combined task, when there is no load balancer."
+  default     = 512
+}
+
+variable "application_memory" {
+  type        = number
+  description = "Memory for the combined task, when there is no load balancer."
+  default     = 1536
+}
+
+variable "app_origin" {
+  type        = string
+  description = "Public origin of the web application, used for sign-in redirects."
+  default     = ""
+}

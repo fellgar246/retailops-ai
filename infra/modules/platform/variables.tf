@@ -149,3 +149,63 @@ variable "tags" {
   description = "Additional tags merged with the standard project tags."
   default     = {}
 }
+
+variable "enable_load_balancer" {
+  type        = bool
+  description = "Put the services behind a load balancer. False runs one task holding both containers, which removes the largest fixed cost."
+  default     = true
+}
+
+variable "use_fargate_spot" {
+  type        = bool
+  description = "Run on spare capacity: far cheaper, interruptible."
+  default     = false
+}
+
+variable "application_cpu" {
+  type        = number
+  description = "CPU for the combined task."
+  default     = 512
+}
+
+variable "application_memory" {
+  type        = number
+  description = "Memory for the combined task."
+  default     = 1536
+}
+
+variable "worker_count" {
+  type        = number
+  description = "How many workers run."
+  default     = 1
+}
+
+variable "auth_provider" {
+  type        = string
+  description = "Identity provider the application validates tokens against."
+  default     = "cognito"
+}
+
+variable "cognito_user_pool_id" {
+  type        = string
+  description = "User pool the API validates tokens against."
+  default     = ""
+}
+
+variable "cognito_client_id" {
+  type        = string
+  description = "Application client id used as the token audience."
+  default     = ""
+}
+
+variable "cognito_domain" {
+  type        = string
+  description = "Hosted sign-in domain used by the web application."
+  default     = ""
+}
+
+variable "app_origin" {
+  type        = string
+  description = "Public origin of the web application, used for sign-in redirects."
+  default     = ""
+}

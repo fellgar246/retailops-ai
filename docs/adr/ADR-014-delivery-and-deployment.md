@@ -66,18 +66,32 @@ against the previous schema.
 Infrastructure changes are read as a plan before they are real. The
 planning role grants no write.
 
-### Staging is sized to be affordable, and says what it costs
+### Staging is sized to be affordable, and is not permanent
 
-The production-shaped composition costs roughly fifty times the account
-budget. Staging drops the NAT gateway, uses the smallest database that
-runs the schema, and runs one task per service.
+The production-shaped composition costs roughly sixty times the account
+budget, and most of that is charged for existing rather than for being
+used: a load balancer, a database and a NAT gateway all bill by the hour
+whether or not anyone is looking.
 
-Removing the NAT gateway means Fargate has no route to the registry, so
-staging places tasks in public subnets with public addresses. Inbound
-remains only what the security group allows. It is a weaker posture than
-private subnets, chosen knowingly for an environment holding synthetic
-data whose purpose is to prove a deployment works. Production keeps its
-NAT gateway.
+Staging drops all three.
+
+- **No load balancer.** It was providing a stable name and nothing else,
+  since the browser only talks to the web application, which forwards to
+  the API itself. Both containers therefore run in one task and reach each
+  other over localhost. The cost is a stable address.
+- **Fargate Spot.** Spare capacity, interruptible. The worker already
+  survives an interruption, because an expired lease is how it recovers
+  from a crash. The cost is predictability.
+- **No NAT gateway.** Fargate then has no route to the registry, so tasks
+  run in public subnets with public addresses, with inbound still limited
+  to the security group. The cost is private tasks.
+
+Each is a deliberate trade for an environment that holds synthetic data
+and exists to prove a deployment works. **Production keeps all three.**
+
+Even so, staging is applied for a validation window and destroyed, not
+left running. At roughly three cents an hour, proving a deployment costs
+less than a coffee; leaving it up costs more and proves nothing further.
 
 ### Scanning has a written policy
 

@@ -5,6 +5,7 @@ NPM := npm --prefix $(WEB_DIR)
 
 .DEFAULT_GOAL := help
 .PHONY: help setup env ready demo check check-app check-infra ml-smoke perf worker \
+	staging-up staging-down staging-cost \
         dev api web db-up db-down db-logs db-shell migrate migration \
         autogenerate db-reset seed synthetic forecast train documents reconcile \
         review-eval reviews review-feedback aws-smoke \
@@ -103,6 +104,22 @@ aws-smoke: ## Opt-in live S3/Textract/Bedrock smoke (not part of check-app)
 	cd $(API_DIR) && uv run retailops-aws-smoke preflight
 
 check-app: format-check lint typecheck test build ml-smoke ## App quality without images
+
+staging-up: ## Apply staging for a validation window (costs money; see the runbook)
+	@echo "Staging is charged by the hour while it exists. Destroy it when done."
+	cd infra/environments/staging && terraform init -backend-config=backend.hcl -input=false
+	cd infra/environments/staging && terraform apply -input=false
+
+staging-down: ## Destroy staging
+	cd infra/environments/staging && terraform destroy -input=false
+
+staging-cost: ## Show what staging is currently costing this month
+	@aws --no-cli-pager ce get-cost-and-usage \
+		--time-period Start=$$(date -u +%Y-%m-01),End=$$(date -u +%Y-%m-%d) \
+		--granularity MONTHLY --metrics UnblendedCost \
+		--filter '{"Tags":{"Key":"Environment","Values":["staging"]}}' \
+		--query 'ResultsByTime[0].Total.UnblendedCost.[Amount,Unit]' --output text \
+		|| echo "Cost Explorer is not available for this account yet."
 
 check-infra: tf-fmt-check tf-validate ## Terraform format and static validation (no apply)
 

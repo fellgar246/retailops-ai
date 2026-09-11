@@ -26,8 +26,18 @@ module "platform" {
   api_image                  = var.api_image
   web_image                  = var.web_image
   desired_count              = 1
-  cors_origins               = var.cors_origins
-  bedrock_model_id           = var.bedrock_model_id
-  sagemaker_model_group      = var.sagemaker_model_group
-  log_retention_days         = 7
+  worker_count               = 1
+  # No load balancer: one task holds both containers and the web reaches the
+  # API over localhost. The balancer was providing a stable name and nothing
+  # else, at more than half the cost of everything else here.
+  enable_load_balancer = false
+  # Spare capacity. An interrupted task is replaced; an interrupted job's lease
+  # expires and the work is retried, which the worker was built to survive.
+  use_fargate_spot      = true
+  application_cpu       = 512
+  application_memory    = 1536
+  cors_origins          = var.cors_origins
+  bedrock_model_id      = var.bedrock_model_id
+  sagemaker_model_group = var.sagemaker_model_group
+  log_retention_days    = 7
 }
