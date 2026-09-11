@@ -5,7 +5,7 @@ NPM := npm --prefix $(WEB_DIR)
 
 .DEFAULT_GOAL := help
 .PHONY: help setup env ready demo check check-app check-infra ml-smoke perf worker \
-	staging-up staging-down staging-cost \
+	staging-up staging-down staging-cost aws-destroy aws-destroy-plan \
         dev api web db-up db-down db-logs db-shell migrate migration \
         autogenerate db-reset seed synthetic forecast train documents reconcile \
         review-eval reviews review-feedback aws-smoke \
@@ -112,6 +112,12 @@ staging-up: ## Apply staging for a validation window (costs money; see the runbo
 
 staging-down: ## Destroy staging
 	cd infra/environments/staging && terraform destroy -input=false
+
+aws-destroy-plan: ## Show what destroying the AWS environment would remove
+	./scripts/destroy-aws.sh
+
+aws-destroy: ## Destroy the AWS environment (irreversible; asks for the account id)
+	./scripts/destroy-aws.sh --apply
 
 staging-cost: ## Show what staging is currently costing this month
 	@aws --no-cli-pager ce get-cost-and-usage \

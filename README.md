@@ -1,6 +1,14 @@
 # RetailOps AI
 
-Retail operations intelligence platform. This repository currently contains:
+Retail operations intelligence platform.
+
+> **Status: closed.** The project is complete as a portfolio piece and the
+> cloud environment is not maintained. Everything runs locally with no AWS
+> account and no cost — see [Local development](#local-development).
+> What was built, what it proved and what it deliberately stopped short of
+> are recorded in [the closure note](docs/project-closure.md).
+
+This repository contains:
 
 - **The engineering foundation** — a FastAPI backend, a Next.js frontend, a local PostgreSQL database and the tooling needed to develop, test and containerize them.
 - **The core retail domain** — the product catalog (categories, products, suppliers, supplier terms, stores) and the daily sales-history model, with migrations, data-access helpers, development seed data and a deterministic synthetic history generator.
