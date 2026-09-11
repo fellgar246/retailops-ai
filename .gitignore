@@ -60,6 +60,9 @@ artifacts/models/*
 # --- Notebooks ---
 .ipynb_checkpoints/
 
+# Lock files belong to root configurations, not to modules.
+infra/modules/*/.terraform.lock.hcl
+
 # --- Docs ---
 # Architecture decisions and architecture notes are part of the delivered
 # system. Runbooks and planning material carry live infrastructure identifiers
