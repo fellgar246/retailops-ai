@@ -18,7 +18,10 @@ COPY . .
 RUN npm run build
 
 
-FROM node:22-alpine AS runtime
+# The standalone server needs Node and nothing else. Shipping a full image
+# would carry npm and a package manager's own dependencies into production,
+# which is where every finding in this image came from and none of it runs.
+FROM gcr.io/distroless/nodejs22-debian12:nonroot AS runtime
 WORKDIR /app
 
 ENV NODE_ENV=production \
@@ -26,13 +29,9 @@ ENV NODE_ENV=production \
     PORT=3000 \
     HOSTNAME=0.0.0.0
 
-RUN addgroup -g 1001 -S nodejs && adduser -u 1001 -S nextjs -G nodejs
-
-COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
-COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
-
-USER nextjs
+COPY --from=builder --chown=nonroot:nonroot /app/.next/standalone ./
+COPY --from=builder --chown=nonroot:nonroot /app/.next/static ./.next/static
 
 EXPOSE 3000
 
-CMD ["node", "server.js"]
+CMD ["server.js"]
