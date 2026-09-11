@@ -38,7 +38,7 @@ export function ReconciliationTrigger({ onSettled }: { onSettled?: () => void })
         <input
           id="rec-invoice"
           onChange={(event) => setInvoice(event.target.value)}
-          placeholder="INV-1001"
+          placeholder="INV-DEMO-OVER"
           required
           value={invoice}
         />
