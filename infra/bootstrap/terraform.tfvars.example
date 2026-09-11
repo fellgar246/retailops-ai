@@ -4,3 +4,6 @@ account_id        = "000000000000"
 state_bucket_name = "retailops-ai-tfstate-000000000000"
 # Set true only after Cost Explorer is enabled in the billing console.
 enable_cost_allocation_tags = false
+
+pipeline_repository    = "owner/repository"
+pipeline_deploy_branch = "main"

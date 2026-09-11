@@ -1,0 +1,95 @@
+# The gate a developer runs, run again on every change.
+#
+# This workflow receives no credentials and no secrets, on any trigger. The
+# repository is public, so a pull request runs code its author controls; giving
+# that code a token would hand it to whoever opened the request.
+name: Quality
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# Read the code and nothing else.
+permissions:
+  contents: read
+
+concurrency:
+  group: quality-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  application:
+    name: Application
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    services:
+      postgres:
+        # Run the integration tests rather than let them skip. They cover the
+        # dialect the application actually runs on.
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: retailops
+          POSTGRES_PASSWORD: retailops
+          POSTGRES_DB: retailops
+        ports:
+          - 5435:5432
+        options: >-
+          --health-cmd "pg_isready -U retailops -d retailops"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      DATABASE_URL: postgresql+psycopg://retailops:retailops@localhost:5435/retailops
+      # Identity and queue stay local: the gate must not reach a cloud it has
+      # no credentials for, and must not depend on one existing.
+      AUTH_PROVIDER: local
+      AUTH_LOCAL_SECRET: quality-workflow-identity-secret-value
+      JOB_QUEUE_PROVIDER: database
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+          cache-dependency-glob: apps/api/uv.lock
+
+      - uses: actions/setup-python@v5
+        with:
+          # The project pins 3.12; a range here is read inconsistently.
+          python-version: '3.12'
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: apps/web/package-lock.json
+
+      - name: Install dependencies
+        run: make setup
+
+      - name: Check the application
+        run: make check-app
+
+      - name: Apply every migration
+        run: make migrate
+
+  infrastructure:
+    name: Infrastructure
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.10.5
+          terraform_wrapper: false
+
+      - name: Check the infrastructure
+        run: make check-infra

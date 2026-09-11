@@ -17,3 +17,13 @@ output "api_service_name" {
 output "web_service_name" {
   value = aws_ecs_service.web.name
 }
+
+output "migration_task_family" {
+  description = "Task the pipeline runs to apply the schema."
+  value       = aws_ecs_task_definition.migration.family
+}
+
+output "service_names" {
+  description = "Services the pipeline rolls forward."
+  value       = [aws_ecs_service.api.name, aws_ecs_service.web.name, aws_ecs_service.worker.name]
+}

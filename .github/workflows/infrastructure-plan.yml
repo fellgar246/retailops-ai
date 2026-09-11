@@ -1,0 +1,84 @@
+# Show what an infrastructure change would do, before it is real.
+#
+# A pull request from a fork gets no role and no plan. Its subject names a
+# different repository, so the trust policy refuses it; this workflow says so
+# plainly rather than failing in a way that looks like a broken pipeline.
+name: Infrastructure plan
+
+on:
+  pull_request:
+    paths:
+      - 'infra/**'
+      - '.github/workflows/infrastructure-plan.yml'
+
+permissions:
+  contents: read
+  id-token: write
+  pull-requests: write
+
+concurrency:
+  group: infrastructure-plan-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  plan:
+    name: Plan
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Explain a fork
+        if: github.event.pull_request.head.repo.full_name != github.repository
+        run: |
+          echo "::notice::This pull request comes from a fork, so it is given no"
+          echo "::notice::AWS role and no plan is produced. A maintainer will run"
+          echo "::notice::the plan from a branch in this repository."
+
+      - name: Skip when planning is not configured
+        if: vars.AWS_PLAN_ROLE_ARN == ''
+        run: echo "::notice::No planning role is configured; nothing to plan against."
+
+      - name: Assume the planning role
+        if: >-
+          github.event.pull_request.head.repo.full_name == github.repository
+          && vars.AWS_PLAN_ROLE_ARN != ''
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_PLAN_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+          # A short session: the plan takes minutes, not an hour.
+          role-duration-seconds: 900
+
+      - uses: hashicorp/setup-terraform@v3
+        if: >-
+          github.event.pull_request.head.repo.full_name == github.repository
+          && vars.AWS_PLAN_ROLE_ARN != ''
+        with:
+          terraform_version: 1.10.5
+          terraform_wrapper: false
+
+      - name: Plan
+        id: plan
+        if: >-
+          github.event.pull_request.head.repo.full_name == github.repository
+          && vars.AWS_PLAN_ROLE_ARN != ''
+        working-directory: infra/environments/${{ vars.DEPLOY_ENVIRONMENT }}
+        run: |
+          terraform init -backend-config=bucket=${{ vars.TF_STATE_BUCKET }} \
+            -backend-config=key=${{ vars.TF_STATE_KEY }} \
+            -backend-config=region=${{ vars.AWS_REGION }} \
+            -backend-config=use_lockfile=true \
+            -input=false
+          terraform plan -input=false -lock=false -no-color | tee /tmp/plan.txt
+
+      - name: Report the plan
+        if: steps.plan.outcome == 'success'
+        run: |
+          {
+            echo '### Terraform plan'
+            echo '```text'
+            tail -c 60000 /tmp/plan.txt
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"

@@ -1,0 +1,7 @@
+# Copy to backend.hcl (git-ignored) and pass with:
+#   terraform init -backend-config=backend.hcl
+bucket       = "retailops-ai-tfstate-000000000000"
+key          = "retailops-ai/staging/terraform.tfstate"
+region       = "us-east-1"
+encrypt      = true
+use_lockfile = true

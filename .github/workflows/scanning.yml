@@ -1,0 +1,98 @@
+# What we depend on, and what we would ship.
+#
+# Like the quality workflow, this receives no credentials: it reads lockfiles
+# and builds images locally, and never talks to the registry.
+name: Scanning
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  schedule:
+    # A dependency that was clean on merge does not stay clean.
+    - cron: '17 6 * * 1'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: scanning-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  dependencies:
+    name: Dependencies
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+          cache-dependency-glob: apps/api/uv.lock
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: apps/web/package-lock.json
+
+      - name: Audit the backend lockfile
+        working-directory: apps/api
+        run: |
+          uv sync --all-groups
+          # Name the package and version, so a finding can be acted on rather
+          # than muted.
+          uvx pip-audit --strict --progress-spinner off
+
+      - name: Audit the frontend lockfile
+        working-directory: apps/web
+        run: |
+          npm ci
+          # Anything reachable at high severity or worse fails the run; lower
+          # severities are reported and do not block.
+          npm audit --audit-level=high
+
+  images:
+    name: Images
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: api
+            context: apps/api
+            build_args: ENABLE_AWS=true
+          - name: web
+            context: apps/web
+            build_args: ''
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build the image
+        run: |
+          args=""
+          if [ -n "${{ matrix.build_args }}" ]; then
+            args="--build-arg ${{ matrix.build_args }}"
+          fi
+          # shellcheck disable=SC2086
+          docker build $args -t "scan-target:${{ matrix.name }}" "${{ matrix.context }}"
+
+      - name: Scan the image
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          image-ref: scan-target:${{ matrix.name }}
+          format: table
+          exit-code: '1'
+          ignore-unfixed: true
+          severity: HIGH,CRITICAL

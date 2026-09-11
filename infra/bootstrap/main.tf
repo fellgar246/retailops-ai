@@ -83,3 +83,26 @@ resource "aws_ce_cost_allocation_tag" "standard" {
   tag_key = each.value
   status  = "Active"
 }
+
+# The delivery pipeline authenticates here. It belongs with the state bucket
+# rather than with an environment: the provider is account-wide, and the roles
+# must exist before anything they deploy does.
+module "pipeline_identity" {
+  source = "../modules/github_oidc"
+
+  name_prefix           = "${var.project}-pipeline"
+  repository            = var.pipeline_repository
+  deploy_branch         = var.pipeline_deploy_branch
+  create_provider       = var.create_github_oidc_provider
+  existing_provider_arn = var.existing_github_oidc_provider_arn
+  state_bucket_arn      = aws_s3_bucket.state.arn
+  state_key_prefix      = var.project
+  ecr_repository_arns   = var.pipeline_ecr_repository_arns
+  deploy_policy_arns    = var.pipeline_deploy_policy_arns
+
+  tags = {
+    Project   = var.project
+    ManagedBy = "terraform"
+    Component = "pipeline"
+  }
+}

@@ -175,3 +175,9 @@ variable "jobs_queue_url" {
   description = "Queue the API announces work on and the worker consumes."
   default     = ""
 }
+
+variable "assign_task_public_ip" {
+  type        = bool
+  description = "Place tasks in public subnets with a public address. Required when there is no NAT gateway, because Fargate cannot otherwise reach the registry."
+  default     = false
+}

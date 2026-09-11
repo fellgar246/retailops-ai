@@ -1,0 +1,135 @@
+# Build what `main` says, then make it what is running.
+#
+# Only this workflow, on this branch, in this repository can assume the deploy
+# role: the trust policy names the exact subject. A pull request cannot reach
+# it even by rewriting this file, because the file it would rewrite runs under
+# a different subject.
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+
+# One deployment at a time, and never cancelled half way: an interrupted
+# rollout leaves services in a state nobody chose.
+concurrency:
+  group: deploy
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    name: Build and publish
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    # Nothing is deployed until an environment exists to deploy to.
+    if: vars.AWS_DEPLOY_ROLE_ARN != ''
+    outputs:
+      image_tag: ${{ steps.tag.outputs.value }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Name the images after the commit
+        id: tag
+        run: echo "value=${GITHUB_SHA}" >> "$GITHUB_OUTPUT"
+
+      - name: Assume the deploy role
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+
+      - uses: aws-actions/amazon-ecr-login@v2
+        id: registry
+
+      - name: Publish the API image
+        env:
+          REGISTRY: ${{ steps.registry.outputs.registry }}
+          REPOSITORY: ${{ vars.ECR_API_REPOSITORY }}
+          TAG: ${{ steps.tag.outputs.value }}
+        run: |
+          # Tags are immutable, so a rebuild of the same commit is not a
+          # failure: the image that is already there is the one we want.
+          if aws ecr describe-images --repository-name "$REPOSITORY" \
+               --image-ids imageTag="$TAG" >/dev/null 2>&1; then
+            echo "::notice::$REPOSITORY:$TAG is already published"
+            exit 0
+          fi
+          docker build --build-arg ENABLE_AWS=true -t "$REGISTRY/$REPOSITORY:$TAG" apps/api
+          docker push "$REGISTRY/$REPOSITORY:$TAG"
+
+      - name: Publish the web image
+        env:
+          REGISTRY: ${{ steps.registry.outputs.registry }}
+          REPOSITORY: ${{ vars.ECR_WEB_REPOSITORY }}
+          TAG: ${{ steps.tag.outputs.value }}
+        run: |
+          if aws ecr describe-images --repository-name "$REPOSITORY" \
+               --image-ids imageTag="$TAG" >/dev/null 2>&1; then
+            echo "::notice::$REPOSITORY:$TAG is already published"
+            exit 0
+          fi
+          docker build -t "$REGISTRY/$REPOSITORY:$TAG" apps/web
+          docker push "$REGISTRY/$REPOSITORY:$TAG"
+
+  migrate:
+    name: Apply the schema
+    needs: publish
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    if: vars.AWS_DEPLOY_ROLE_ARN != ''
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Assume the deploy role
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+
+      - name: Run the migrations once
+        env:
+          CLUSTER: ${{ vars.ECS_CLUSTER }}
+          TASK_FAMILY: ${{ vars.ECS_MIGRATION_TASK }}
+          SUBNETS: ${{ vars.ECS_PRIVATE_SUBNETS }}
+          SECURITY_GROUP: ${{ vars.ECS_SECURITY_GROUP }}
+        run: scripts/run-migration-task.sh
+
+  release:
+    name: Roll the services forward
+    needs: migrate
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    if: vars.AWS_DEPLOY_ROLE_ARN != ''
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Assume the deploy role
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+
+      - name: Deploy
+        env:
+          CLUSTER: ${{ vars.ECS_CLUSTER }}
+          SERVICES: ${{ vars.ECS_SERVICES }}
+        run: scripts/deploy-services.sh
+
+      - name: Record what is running
+        run: |
+          {
+            echo "### Deployed"
+            echo ""
+            echo "| Item | Value |"
+            echo "|---|---|"
+            echo "| Commit | \`${GITHUB_SHA}\` |"
+            echo "| Environment | \`${{ vars.DEPLOY_ENVIRONMENT }}\` |"
+          } >> "$GITHUB_STEP_SUMMARY"

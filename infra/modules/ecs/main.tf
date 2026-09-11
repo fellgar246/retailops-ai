@@ -1,3 +1,11 @@
+locals {
+  # Fargate needs a route to the registry and to the AWS APIs. With a NAT
+  # gateway that is a private subnet; without one it must be a public subnet
+  # with a public address. Inbound is still only what the security group
+  # allows, which is the load balancer.
+  task_subnet_ids = var.assign_task_public_ip ? var.public_subnet_ids : var.private_subnet_ids
+}
+
 resource "aws_ecs_cluster" "this" {
   name = var.cluster_name
   tags = merge(var.tags, { Name = var.cluster_name })
@@ -154,6 +162,42 @@ resource "aws_ecs_task_definition" "web" {
   ])
 }
 
+# Run by the pipeline before any service moves. Never a service: it must run
+# exactly once per deployment, and a failure must stop the rollout rather than
+# restart forever.
+resource "aws_ecs_task_definition" "migration" {
+  family                   = "${var.name_prefix}-migration"
+  network_mode             = "awsvpc"
+  requires_compatibilities = ["FARGATE"]
+  cpu                      = 512
+  memory                   = 1024
+  execution_role_arn       = var.execution_role_arn
+  task_role_arn            = var.api_task_role_arn
+  tags                     = merge(var.tags, { Name = "${var.name_prefix}-migration" })
+
+  container_definitions = jsonencode([
+    {
+      name      = "migration"
+      image     = var.api_image
+      essential = true
+      # The same image being deployed, so the migrations and the code that
+      # expects them are the same commit.
+      command = ["alembic", "upgrade", "head"]
+      environment = [
+        { name = "DATABASE_URL", value = var.database_url }
+      ]
+      logConfiguration = {
+        logDriver = "awslogs"
+        options = {
+          awslogs-group         = var.api_log_group_name
+          awslogs-region        = var.aws_region
+          awslogs-stream-prefix = "migration"
+        }
+      }
+    }
+  ])
+}
+
 resource "aws_ecs_task_definition" "worker" {
   family                   = "${var.name_prefix}-worker"
   network_mode             = "awsvpc"
@@ -207,9 +251,9 @@ resource "aws_ecs_service" "worker" {
   tags            = merge(var.tags, { Name = "${var.name_prefix}-worker" })
 
   network_configuration {
-    subnets          = var.private_subnet_ids
+    subnets          = local.task_subnet_ids
     security_groups  = [var.ecs_security_group_id]
-    assign_public_ip = false
+    assign_public_ip = var.assign_task_public_ip
   }
 }
 
@@ -222,9 +266,9 @@ resource "aws_ecs_service" "api" {
   tags            = merge(var.tags, { Name = "${var.name_prefix}-api" })
 
   network_configuration {
-    subnets          = var.private_subnet_ids
+    subnets          = local.task_subnet_ids
     security_groups  = [var.ecs_security_group_id]
-    assign_public_ip = false
+    assign_public_ip = var.assign_task_public_ip
   }
 
   load_balancer {
@@ -245,9 +289,9 @@ resource "aws_ecs_service" "web" {
   tags            = merge(var.tags, { Name = "${var.name_prefix}-web" })
 
   network_configuration {
-    subnets          = var.private_subnet_ids
+    subnets          = local.task_subnet_ids
     security_groups  = [var.ecs_security_group_id]
-    assign_public_ip = false
+    assign_public_ip = var.assign_task_public_ip
   }
 
   load_balancer {
