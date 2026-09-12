@@ -3,7 +3,7 @@
 Retail operations intelligence platform.
 
 > **Status: closed.** The project is complete as a portfolio piece and the
-> cloud environment is not maintained. Everything runs locally with no AWS
+> cloud environment has been torn down. Everything runs locally with no AWS
 > account and no cost — see [Local development](#local-development).
 > What was built, what it proved and what it deliberately stopped short of
 > are recorded in [the closure note](docs/project-closure.md).

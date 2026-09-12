@@ -86,6 +86,23 @@ For a portfolio, paying that indefinitely buys very little. The
 deployment was designed, costed and left un-applied, which is a more
 useful thing to show than a running demo nobody visits.
 
+## The teardown
+
+Performed 2026-09-11. Forty-five resources removed: the network, the
+document bucket and its contents, the user pool and both operator
+accounts, the job queue and its dead-letter queue, the registry
+repositories, the IAM roles, the secret containers and the budget.
+Verified afterwards, resource by resource.
+
+The Terraform state bucket is kept. It holds the history of every apply,
+costs a fraction of a cent, and is what makes the environment a command
+rather than a rebuild.
+
+```bash
+make aws-destroy-plan    # what would go
+make aws-destroy         # remove it
+```
+
 ## What remains
 
 The repository. Everything is expressed as code: the application, its
