@@ -1,14 +1,151 @@
 # RetailOps AI
 
-Retail operations intelligence platform.
+**Retail operations platform where AI assists and humans decide.**
 
-> **Status: closed.** The project is complete as a portfolio piece and the
-> cloud environment has been torn down. Everything runs locally with no AWS
-> account and no cost — see [Local development](#local-development).
-> What was built, what it proved and what it deliberately stopped short of
-> are recorded in [the closure note](docs/project-closure.md).
+[![Quality](https://github.com/fellgar246/retailops-ai/actions/workflows/quality.yml/badge.svg)](https://github.com/fellgar246/retailops-ai/actions/workflows/quality.yml)
+[![Scanning](https://github.com/fellgar246/retailops-ai/actions/workflows/scanning.yml/badge.svg)](https://github.com/fellgar246/retailops-ai/actions/workflows/scanning.yml)
 
-This repository contains:
+A supplier sends a price sheet. The platform stores it, reads it, checks every
+row against the catalog with deterministic rules, and asks a language model
+only about the things rules cannot settle. Anything uncertain or financially
+significant goes to a person, and what that person decided is recorded against
+a verified identity, permanently.
+
+The same applies to invoices: a three-way match against the purchase order and
+the goods receipt, with explicit tolerances, and an exception queue for what
+does not reconcile.
+
+> **Two ideas run through the whole system.** Deterministic before AI: a model
+> is asked only where judgement is genuinely required. And no model output is
+> trusted on its own: confidence and financial impact decide what a person has
+> to look at.
+
+![The operations console: a review case showing deterministic facts, the AI proposal and the human decision as three separate things](docs/images/review-decision.jpg)
+
+*One review case. The rule's finding, the model's proposal and the person's
+decision are three separate panels, because they are three separate kinds of
+claim — and only the last one is binding.*
+
+---
+
+## How it fits together
+
+```mermaid
+flowchart LR
+    OP([Operator]) --> CONSOLE[Operations console]
+    CONSOLE --> API[API]
+    API -->|stores the bytes| STORE[(Document store)]
+    API -->|records a job| QUEUE[[Job queue]]
+    QUEUE --> WORKER[Worker]
+    WORKER --> PARSE[Parse to a canonical sheet]
+    PARSE --> RULES{Deterministic rules}
+    RULES -->|settled| FINDINGS[Findings]
+    RULES -->|needs judgement| AI[AI review]
+    AI --> POLICY{Confidence and impact}
+    POLICY -->|clear| FINDINGS
+    POLICY -->|uncertain or costly| HUMAN[Human review queue]
+    HUMAN --> AUDIT[(Append-only audit)]
+    FINDINGS --> AUDIT
+```
+
+The queue exists because reading a scanned document and asking a model take
+tens of seconds. Intake answers immediately and the console follows the job
+until it settles.
+
+## Local, or cloud, without changing the code
+
+Every external dependency sits behind a contract with two implementations.
+Nothing in the business logic knows which one is running.
+
+```mermaid
+flowchart TB
+    subgraph CORE[Core domain — no vendor SDK reaches here]
+        D1[DocumentStorage]
+        D2[SheetAnalyzer]
+        D3[AIReviewer]
+        D4[IdentityVerifier]
+        D5[JobQueue]
+        D6[ModelRegistry]
+    end
+    CORE --> LOCAL[Local: filesystem · PaddleOCR · mock · dev tokens · database]
+    CORE --> CLOUD[Cloud: S3 · Textract · Bedrock · Cognito · SQS · SageMaker]
+```
+
+That is what makes the whole platform runnable on a laptop with no cloud
+account and no cost — and why switching to managed services was configuration
+rather than a rewrite.
+
+## Try it in three commands
+
+No AWS account, no credentials, no cost.
+
+```bash
+make ready   # PostgreSQL in Docker, schema current
+make demo    # catalog, a year of sales, forecasts, documents, matches, review cases
+make dev     # API on :8000, console on :3000
+```
+
+Open `http://localhost:3000`, sign in with any name, and start from the
+overview. `make worker` processes anything you upload.
+
+## The console
+
+| | |
+|---|---|
+| ![Overview](docs/images/overview.jpg) | ![Review queue](docs/images/review-queue.jpg) |
+| **Overview** — where to intervene today, every number read from the API | **Review queue** — ordered by priority and financial impact, with severity and model confidence in separate columns |
+
+![Supplier documents, with the upload control and the findings each sheet produced](docs/images/documents.jpg)
+
+*Supplier documents. Upload a sheet and the page follows the job until it
+settles; the findings column is what the deterministic rules produced.*
+
+## What it proved
+
+Four things were exercised against real AWS rather than described, then torn
+down:
+
+| | |
+|---|---|
+| **Document intake** | Stored in S3, read by Textract, reviewed by Bedrock, routed by the existing policy |
+| **Identity** | Sign-in through a Cognito user pool, the token subject recorded on the decision and matching the pool exactly |
+| **Asynchronous work** | A job announced on SQS, leased by a worker, the message settled only after the outcome was recorded |
+| **Cost discipline** | Every environment sized against a stated budget before anything was applied |
+
+## By the numbers
+
+| | |
+|---|---|
+| Automated checks | **941** backend, **46** frontend |
+| Static analysis | Ruff, ESLint, strict mypy, `tsc --noEmit` |
+| Architecture decisions | **15**, including the ones later reversed |
+| Infrastructure | Terraform, applied and destroyed from code |
+| Total cloud spend | **$0.00** |
+
+## Worth reading
+
+The code is the easy part to skim. These explain the choices:
+
+- [Why authentication is an adapter, and why Cognito](docs/adr/ADR-012-application-authentication-and-identity.md)
+- [Why work runs behind a queue, and what the row decides](docs/adr/ADR-013-operator-intake-and-asynchronous-processing.md)
+- [Why the pipeline holds no credentials](docs/adr/ADR-014-delivery-and-deployment.md)
+- [Why AI is asked last, not first](docs/adr/ADR-008-ai-review-contracts.md)
+- [All fifteen decisions](docs/adr/) · [Architecture notes](docs/architecture/)
+
+## Status
+
+> **Closed.** Complete as a portfolio piece; the cloud environment has been
+> torn down and everything runs locally.
+>
+> It stopped short of a deployed application on purpose. The pipeline that
+> would deploy one is built and reviewed but never switched on, because the
+> smallest environment it could target cost more per month than the project's
+> entire budget. That decision, what it cost, and the gaps left open are in
+> [the closure note](docs/project-closure.md).
+
+---
+
+## What is inside
 
 - **The engineering foundation** — a FastAPI backend, a Next.js frontend, a local PostgreSQL database and the tooling needed to develop, test and containerize them.
 - **The core retail domain** — the product catalog (categories, products, suppliers, supplier terms, stores) and the daily sales-history model, with migrations, data-access helpers, development seed data and a deterministic synthetic history generator.
@@ -21,21 +158,14 @@ This repository contains:
 - **Authentication** — sign-in against a local development provider or a hosted user pool, two roles, and a verified subject on every review decision and audit event.
 - **Operator intake** — upload a supplier sheet, reconcile an invoice or evaluate demand from the console; the work runs behind a queue and the page follows the job until it settles.
 - **Operations web app** — a desktop-first shell for the overview, forecast runs, supplier documents, reconciliation exceptions, the human review queue, AI evaluation and the audit trail.
-
-Cloud adapters (S3 storage, Textract sheet translation, Bedrock review,
-SageMaker registry) implement the same contracts as the local stack and
-stay disabled unless `AWS_ENABLED` and the matching feature flag are set.
-`AWS_ENABLED=false` remains the local default.
+- **Delivery pipeline** — a quality gate on every change, images published by commit, and a deployment that applies the schema before it moves any service. Built, reviewed, never switched on.
 
 **Portable replacements:** OpenAI API review and PaddleOCR document extraction
-can run from the same backend locally or on AWS, independently of the AWS flags.
-See [OpenAI + PaddleOCR setup](apps/api/PROVIDERS.md) for provider configuration,
-optional OCR dependencies, Docker builds and AWS runtime requirements.
+can run from the same backend, independently of the AWS flags. See
+[OpenAI + PaddleOCR setup](apps/api/PROVIDERS.md).
 
-The `dev` AWS foundation (remote state, VPC, IAM, documents bucket, ECR
-and Secrets Manager containers) can be applied from `infra/`. Local
-developer commands never plan or apply. They never enable Bedrock,
-Textract, SageMaker, ECS or RDS. Staging and prod stay placeholders.
+The Terraform under `infra/` describes the AWS foundation that was applied and
+later destroyed. Local developer commands never plan or apply.
 
 ## Prerequisites
 
